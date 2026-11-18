@@ -18,7 +18,7 @@ jobs:
           arduino-cli core install esp32:esp32
           arduino-cli lib install ArduinoJson FastLED NimBLE-Arduino U8g2
       - name: Compile the main board (ESP32-S3)
-        run: arduino-cli compile --fqbn "esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,PSRAM=opi,CDCOnBoot=cdc" --output-dir out/s3 macropad_s3
+        run: arduino-cli compile --fqbn "esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,PSRAM=opi,CDCOnBoot=default" --output-dir out/s3 macropad_s3
       - name: Compile the stick (ESP32-C6)
         run: arduino-cli compile --fqbn "esp32:esp32:esp32c6:CDCOnBoot=cdc" --output-dir out/c6 joystick_c6
       - name: Compile the hiiiii test (ESP32-S3)

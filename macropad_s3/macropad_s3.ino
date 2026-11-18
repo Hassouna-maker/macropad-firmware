@@ -9,6 +9,9 @@ struct TextLine;
 /*
  * ESP32-S3 Wireless Macro Pad v5.5  (Arduino IDE / arduino-esp32 core 3.x)
  *
+ * NEW in v5.8: the flasher's waiting screen shows what the USB host sees (to find out why a board isn't found).
+ *  Built with USB CDC On Boot off: the pad's serial messages now come out of its COM port.
+ *
  * NEW in v5.7: the USB flasher also finds a board that was plugged in before it started (and checks every 0.5 s).
  *
  * NEW in v5.6: the USB flasher also does ESP32-S3, ESP32-C3 and ESP32-C6 boards (on their UART port or on their
@@ -421,7 +424,7 @@ static volatile bool     swMode = false;                  // the timer button wo
 static volatile uint8_t  swState = SW_IDLE;
 static volatile uint32_t swStartAt = 0, swAccum = 0;      // elapsed = swAccum (+ time since swStartAt while running)
 static uint32_t swElapsed() { return swState == SW_RUN ? swAccum + (millis() - swStartAt) : swAccum; }
-constexpr const char* FW_VERSION = "5.7";
+constexpr const char* FW_VERSION = "5.8";
 static volatile bool sotaBusy = false;                    // sending a firmware file to the stick right now
 static bool sleepAllowed() { return timerState == T_IDLE && swState == SW_IDLE && !sotaBusy; }   // never sleep with a timer / stopwatch / stick update going
 
@@ -5390,6 +5393,11 @@ static void runUsbFlasher() {
       lastLook = millis();
       uint8_t list[4]; int n = 0;
       if (usb_host_device_addr_list_fill(sizeof list, list, &n) == ESP_OK && n > 0) { uhNewAddr = list[0]; break; }
+      usb_host_lib_info_t li = {};
+      usb_host_lib_info(&li);
+      char b[40];
+      snprintf(b, sizeof b, "host on, %d dev, %lus left", li.num_devices, (unsigned long)((120000 - (millis() - t0)) / 1000));
+      flShow("PLUG IN BOARD", b, -1);
     }
     if (digitalRead(PIN_MODE_BTN) == LOW) flDone(false, "stopped");
     if (millis() - t0 > 120000) flDone(false, "no board plugged in (2 min)");
