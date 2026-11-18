@@ -21,7 +21,9 @@ jobs:
         run: arduino-cli compile --fqbn "esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,PSRAM=opi,CDCOnBoot=cdc" --output-dir out/s3 macropad_s3
       - name: Compile the stick (ESP32-C6)
         run: arduino-cli compile --fqbn "esp32:esp32:esp32c6:CDCOnBoot=cdc" --output-dir out/c6 joystick_c6
-      - name: Put the two update files on the "latest" release
+      - name: Compile the hiiiii test (ESP32-S3)
+        run: arduino-cli compile --fqbn "esp32:esp32:esp32s3" --output-dir out/hi hiiiii_s3
+      - name: Put the update files on the "latest" release
         if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -29,5 +31,7 @@ jobs:
           mkdir -p files
           cp out/s3/macropad_s3.ino.bin files/macropad_s3.ino.bin
           cp out/c6/joystick_c6.ino.bin files/joystick_c6.ino.bin
+          cp out/hi/hiiiii_s3.ino.bin files/hiiiii_s3.ino.bin
+          if [ -f out/hi/hiiiii_s3.ino.merged.bin ]; then cp out/hi/hiiiii_s3.ino.merged.bin files/hiiiii_s3.ino.merged.bin; fi
           gh release delete latest --yes --cleanup-tag || true
-          gh release create latest files/*.bin --title "Latest firmware" --notes "Built from ${GITHUB_SHA::7}. In the pad's setup page: macropad_s3.ino.bin goes in the main board area, joystick_c6.ino.bin in the stick area."
+          gh release create latest files/*.bin --title "Latest firmware" --notes "Built from ${GITHUB_SHA::7}. In the pad's setup page: macropad_s3.ino.bin goes in the main board area, joystick_c6.ino.bin in the stick area. hiiiii_s3 files are for the USB flasher card."

@@ -9,6 +9,9 @@ struct TextLine;
 /*
  * ESP32-S3 Wireless Macro Pad v5.5  (Arduino IDE / arduino-esp32 core 3.x)
  *
+ * NEW in v5.6: the USB flasher also does ESP32-S3, ESP32-C3 and ESP32-C6 boards (on their UART port or on their
+ *  own USB port), and merged files for those chips.
+ *
  * NEW in v5.5: USB flasher for classic ESP32 boards.
  *  - Setup page, card "Flash a board on the USB port": save the board's file (.ino.bin, or .merged.bin for a
  *    blank board), then "Start flashing". The pad restarts as a USB flasher: plug the board into the pad's
@@ -416,7 +419,7 @@ static volatile bool     swMode = false;                  // the timer button wo
 static volatile uint8_t  swState = SW_IDLE;
 static volatile uint32_t swStartAt = 0, swAccum = 0;      // elapsed = swAccum (+ time since swStartAt while running)
 static uint32_t swElapsed() { return swState == SW_RUN ? swAccum + (millis() - swStartAt) : swAccum; }
-constexpr const char* FW_VERSION = "5.5";
+constexpr const char* FW_VERSION = "5.6";
 static volatile bool sotaBusy = false;                    // sending a firmware file to the stick right now
 static bool sleepAllowed() { return timerState == T_IDLE && swState == SW_IDLE && !sotaBusy; }   // never sleep with a timer / stopwatch / stick update going
 
@@ -4556,9 +4559,9 @@ function render(){
   Main board: installed at once, then the pad restarts in Bluetooth mode (your settings stay).<br>
   Stick: kept on the pad and sent over the wireless link the next time the stick is on and left still for 2 s (about a minute; its strip fills up purple, the OLED shows the progress). The stick needs code v3.0 or newer, uploaded by USB once. The stick's own Partition Scheme must have room for updates (the default one does).</small></div>
   <div class=card><h3>Flash a board on the USB port</h3><small id=flv>${flInfo()}</small>
-  <label>Classic ESP32 file (.ino.bin, or .merged.bin for a blank board)<input type=file id=ftg accept=".bin"></label><button class=p onclick="upTg()">Save file</button>${FL.file?'<button class=p onclick="startFlash()">Start flashing</button><button onclick="delTg()">Delete file</button>':''}
+  <label>Board file: ESP32, ESP32-S3, C3 or C6 (.ino.bin, or .merged.bin for a blank board)<input type=file id=ftg accept=".bin"></label><button class=p onclick="upTg()">Save file</button>${FL.file?'<button class=p onclick="startFlash()">Start flashing</button><button onclick="delTg()">Delete file</button>':''}
   <div id=flst class=err></div>
-  <small>For classic ESP32 boards with a CP2102, CH340 or CH9102 USB chip. Export the board's sketch with "ESP32 Dev Module" (or its own board) picked in Tools. <b>Start flashing</b> restarts the pad as a USB flasher (no Bluetooth meanwhile). Plug the board into the pad's USB-C port marked <b>USB</b> (not UART / COM) with an OTG adapter or USB-C cable; follow the OLED. The board needs 5 V from that port: bridge the USB-OTG pads on the S3 board if it has them, or use an OTG adapter with power in. When it is done the board restarts with its new code and the pad goes back to Bluetooth mode. A .ino.bin keeps the board's bootloader and partitions (it must have had an Arduino sketch before); use .merged.bin for a brand-new board.</small></div>
+  <small>For ESP32, ESP32-S3, C3 and C6 boards: on a port with a CP2102, CH340 or CH9102 USB chip, or on the S3 / C3 / C6 chip's own USB port. Export the board's sketch with its own board picked in Tools. <b>Start flashing</b> restarts the pad as a USB flasher (no Bluetooth meanwhile). Plug the board into the pad's USB-C port marked <b>USB</b> (not UART / COM) with an OTG adapter or USB-C cable; follow the OLED. The board needs 5 V from that port: bridge the USB-OTG pads on the S3 board if it has them, or use an OTG adapter with power in. When it is done the board restarts with its new code and the pad goes back to Bluetooth mode. A .ino.bin keeps the board's bootloader and partitions (it must have had an Arduino sketch before); use .merged.bin for a brand-new board.</small></div>
   <div class=card><h3>Backup / restore</h3><button onclick="backup()">Show backup</button><button onclick="restoreBox()">Restore a backup</button><div id=bk></div>
   <small>The backup has your whole setup except the Wi-Fi password. Restoring loads it into this page; press Save & Restart to keep it.</small></div>
   <small>Allowed pins: 1,2,4-11,14-18. Pots and joystick axes: 1-10 only. Reserved: 21 (mode), 38 (strip), 39/40 (effect buttons), 47 (matrix), 41/42 (OLED), 12/13 (LED power switches).</small>`;
@@ -4608,7 +4611,7 @@ function loadBk(){let c;try{c=JSON.parse(bkt.value);}catch(e){alert('That is not
   c.clock=Object.assign({},c.clock,{pass:'',passSet:cfg.clock.passSet});cfg=norm(c);render();
   alert('Backup loaded. Check it, then press Save & Restart.');}
 let STICK={mac:''},OTA={},FL={};
-function flInfo(){const o=FL;let s=o.file?'Saved: <b>'+o.file+'</b> ('+Math.round(o.size/1024)+' KB, written at 0x'+Number(o.addr).toString(16)+')':'No file saved yet.';if(o.msg)s+='<br>Last time: '+o.msg;return s;}
+function flInfo(){const o=FL;let s=o.file?'Saved: <b>'+o.file+'</b> ('+(o.chip||'ESP32')+', '+Math.round(o.size/1024)+' KB, written at 0x'+Number(o.addr).toString(16)+')':'No file saved yet.';if(o.msg)s+='<br>Last time: '+o.msg;return s;}
 async function loadFl(){try{FL=await (await fetch('/api/flash')).json();}catch(e){FL={};}render();}
 function upTg(){
   const f=document.getElementById('ftg').files[0],st=document.getElementById('flst');
@@ -4744,27 +4747,30 @@ static void tgUpload() {
   } else if (u.status == UPLOAD_FILE_END || u.status == UPLOAD_FILE_ABORTED) {
     if (otaFile) otaFile.close();
     if (u.status == UPLOAD_FILE_ABORTED) otaErr = "Upload interrupted";
-    uint32_t addr = 0xFFFFFFFF;
+    uint32_t addr = 0xFFFFFFFF; uint16_t tgId = 0;
     if (!otaErr.length()) {
-      uint8_t h[40] = {0}, h2[16] = {0};
+      uint8_t h[40] = {0}, h2[16] = {0}, h3[40] = {0};
       File r = FFat.open("/target.tmp", FILE_READ);
       if (r) {
         r.read(h, sizeof h);
         if (otaBytes > 0x1010 && r.seek(0x1000)) r.read(h2, sizeof h2);
+        if (otaBytes > 0x10040 && r.seek(0x10000)) r.read(h3, sizeof h3);
         r.close();
       }
-      uint32_t mg; memcpy(&mg, h + 32, 4);
+      auto chipOk = [](uint16_t c) { return c == 0 || c == 5 || c == 9 || c == 13; };   // ESP32, C3, S3, C6
+      uint32_t mg, mg3; memcpy(&mg, h + 32, 4); memcpy(&mg3, h3 + 32, 4);
       const uint16_t id = h[12] | (h[13] << 8), id2 = h2[12] | (h2[13] << 8);
-      if (h[0] == 0xE9 && id == 0x0000 && mg == 0xABCD5432u) addr = 0x10000;                // app file
-      else if (h[0] == 0xFF && h2[0] == 0xE9 && id2 == 0x0000) addr = 0;                     // merged file
-      else if (h[0] == 0xE9 && id != 0x0000) otaErr = "This file is for another chip. For a classic ESP32 pick \"ESP32 Dev Module\" in Tools, then export again.";
+      if (h[0] == 0xE9 && mg == 0xABCD5432u && chipOk(id)) { addr = 0x10000; tgId = id; }                 // app file
+      else if (h[0] == 0xFF && h2[0] == 0xE9 && id2 == 0) { addr = 0; tgId = 0; }                          // merged, classic ESP32
+      else if (h[0] == 0xE9 && id != 0 && chipOk(id) && h3[0] == 0xE9 && mg3 == 0xABCD5432u) { addr = 0; tgId = id; }   // merged, S3 / C3 / C6
+      else if (h[0] == 0xE9 && !chipOk(id)) otaErr = "This file is for a chip the flasher doesn't know (it does ESP32, S3, C3 and C6).";
       else if (h[0] == 0xE9) otaErr = "This is not the app file. Use .ino.bin (or .merged.bin for a blank board).";
-      else otaErr = "This is not a classic ESP32 firmware file.";
+      else otaErr = "This is not an ESP32 firmware file.";
     }
     if (otaErr.length()) { FFat.remove("/target.tmp"); return; }
     FFat.remove("/target.bin");
     if (!FFat.rename("/target.tmp", "/target.bin")) { otaErr = "Can't save the file on the pad"; return; }
-    prefs.putUInt("tgsize", otaBytes); prefs.putUInt("tgaddr", addr);
+    prefs.putUInt("tgsize", otaBytes); prefs.putUInt("tgaddr", addr); prefs.putUShort("tgchip", tgId);
     prefs.putString("tgname", u.filename); prefs.putString("tgmsg", "");
   }
 }
@@ -4871,6 +4877,8 @@ static void startConfigPortal() {
     d["size"] = prefs.getUInt("tgsize", 0);
     d["addr"] = prefs.getUInt("tgaddr", 0x10000);
     d["msg"] = prefs.getString("tgmsg", "");
+    const uint16_t c = prefs.getUShort("tgchip", 0);
+    d["chip"] = c == 9 ? "ESP32-S3" : c == 5 ? "ESP32-C3" : c == 13 ? "ESP32-C6" : "ESP32";
     String o; serializeJson(d, o);
     server.send(200, "application/json", o);
   });
@@ -5079,7 +5087,9 @@ static volatile bool uhGone = false, uhInRun = false;
 static SemaphoreHandle_t uhCtrlSem = nullptr, uhOutSem = nullptr;
 static StreamBufferHandle_t uhRx = nullptr;
 static usb_transfer_t *uhCtrlX = nullptr, *uhOutX = nullptr, *uhInX = nullptr;
-static uint8_t  uhKind = 0;                               // 1 CP210x, 2 CH34x, 3 CDC-ACM (CH9102 / CH343)
+static uint8_t  uhKind = 0;                               // 1 CP210x, 2 CH34x, 3 CDC-ACM (CH9102 / CH343 / the chip's own USB)
+static bool     uhJtag = false;                           // the board's own USB port (ESP32-S3 / C3 / C6 USB-Serial-JTAG)
+static uint16_t tgChip = 0;                               // chip of the file: 0 ESP32, 9 S3, 5 C3, 13 C6
 static uint8_t  uhIfData = 0, uhIfComm = 0, uhEpIn = 0, uhEpOut = 0;
 static uint16_t uhMpsIn = 64;
 
@@ -5153,6 +5163,7 @@ static bool uhOpen(uint8_t addr, String& err) {
   const usb_device_desc_t* dd = nullptr; const usb_config_desc_t* cd = nullptr;
   if (usb_host_get_device_descriptor(uhDev, &dd) != ESP_OK || usb_host_get_active_config_descriptor(uhDev, &cd) != ESP_OK) { err = "USB: no descriptor"; return false; }
   const uint16_t vid = dd->idVendor, pid = dd->idProduct;
+  uhJtag = vid == 0x303A;
   const uint8_t* p = (const uint8_t*)cd;
   const uint16_t total = cd->wTotalLength;
   int8_t ifNum[8]; uint8_t ifCls[8], eIn[8], eOut[8]; uint16_t mps[8]; int ni = -1;
@@ -5250,9 +5261,16 @@ static bool romSync() {
 }
 static bool romEnter() {                                  // reset into download mode (same pulses as the Arduino IDE)
   for (uint8_t attempt = 0; attempt < 6; attempt++) {
-    uhLines(false, true);  delay(100);                    // EN low = reset
-    uhLines(true, false);  delay((attempt & 1) ? 400 : 50);   // IO0 low while EN goes high = download mode
-    uhLines(false, false); delay(50);
+    if (uhJtag) {                                         // the chip's own USB port: its USB block does the reset
+      uhLines(false, false); delay(100);
+      uhLines(true, false);  delay(100);                  // boot pin low
+      uhLines(true, true);   uhLines(false, true); delay(100);   // reset (through 1,1 like esptool)
+      uhLines(false, false); delay(attempt & 1 ? 500 : 200);
+    } else {
+      uhLines(false, true);  delay(100);                  // EN low = reset
+      uhLines(true, false);  delay((attempt & 1) ? 400 : 50);   // IO0 low while EN goes high = download mode
+      uhLines(false, false); delay(50);
+    }
     uhDrain();
     if (romSync()) return true;
     if (uhGone) return false;
@@ -5301,9 +5319,9 @@ static String romFlashFile(File& f, uint32_t size, uint32_t addr) {
   p[0] = 0; p[1] = 4UL * 1024 * 1024; p[2] = 64 * 1024; p[3] = 4096; p[4] = 256; p[5] = 0xFFFF;
   if (!romCmd(0x0B, (uint8_t*)p, 24, 0, 3000, nullptr)) return "flash setup failed";
   const uint32_t BS = 0x400, blocks = (size + BS - 1) / BS;
-  p[0] = size; p[1] = blocks; p[2] = BS; p[3] = addr;
+  p[0] = size; p[1] = blocks; p[2] = BS; p[3] = addr; p[4] = 0;   // newer chips: 5th word = not encrypted
   flShow("ERASING", "takes a few seconds", 0);
-  if (!romCmd(0x02, (uint8_t*)p, 16, 0, 20000 + size / 1024 * 40, nullptr)) return "erase failed";
+  if (!romCmd(0x02, (uint8_t*)p, tgChip == 0 ? 16 : 20, 0, 20000 + size / 1024 * 40, nullptr)) return "erase failed";
   for (uint32_t seq = 0; seq < blocks; seq++) {
     const uint32_t off = seq * BS, n = min(BS, size - off);
     const uint32_t hdr[4] = {BS, seq, 0, 0};
@@ -5331,7 +5349,7 @@ static String romFlashFile(File& f, uint32_t size, uint32_t addr) {
   }
   md.calculate();
   if (strcasecmp(md.toString().c_str(), theirs) != 0) return "check failed (MD5)";
-  uhLines(false, true); delay(100); uhLines(false, false);   // reset: the board starts its new code
+  uhLines(false, true); delay(200); uhLines(false, false);   // reset: the board starts its new code
   return "";
 }
 
@@ -5339,6 +5357,7 @@ static String romFlashFile(File& f, uint32_t size, uint32_t addr) {
 static void runUsbFlasher() {
   FastLED.clear(true);
   const uint32_t size = prefs.getUInt("tgsize", 0), addr = prefs.getUInt("tgaddr", 0x10000);
+  tgChip = prefs.getUShort("tgchip", 0);
   ffatOk = FFat.begin(false);
   File f;
   if (ffatOk) f = FFat.open("/target.bin", FILE_READ);
@@ -5371,7 +5390,7 @@ static void runUsbFlasher() {
   delay(300);
   String err;
   if (!uhOpen(uhNewAddr, err)) flDone(false, err);
-  flShow("CONNECTING", uhKind == 1 ? "CP210x chip" : uhKind == 2 ? "CH340 chip" : "CH9102 / CDC chip", -1);
+  flShow("CONNECTING", uhJtag ? "board's own USB" : uhKind == 1 ? "CP210x chip" : uhKind == 2 ? "CH340 chip" : "CH9102 / CDC chip", -1);
   if (!romEnter()) flDone(false, "no answer: hold BOOT on the board, try again");
   err = romFlashFile(f, size, addr);
   f.close();
