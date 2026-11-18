@@ -1,6 +1,9 @@
 /*
- * Wireless joystick board v3.0 (Waveshare ESP32-C6-Zero) -> ESP-NOW -> MacroPad main board
+ * Wireless joystick board v3.1 (Waveshare ESP32-C6-Zero) -> ESP-NOW -> MacroPad main board
  * Needs main board (ESP32-S3) code v4.7 or newer (v4.9 for the stopwatch, v5.3 for updates over the air).
+ *
+ * NEW in v3.1: first update sent through the pad (a test that the update path works). The version shows in the
+ *  pad's setup page and on its OLED after the update. Nothing else changes.
  *
  * NEW in v3.0: updates over the air. Upload the stick file (.ino.bin) in the pad's setup page; the pad sends it
  *  the next time the stick is on and left still. The strip fills up purple while it comes in, then the stick
@@ -72,7 +75,7 @@
 #include <FastLED.h>
 #include <Update.h>
 
-constexpr const char* FW_VERSION = "3.0";              // sent to the pad (shown in its setup page)
+constexpr const char* FW_VERSION = "3.1";              // sent to the pad (shown in its setup page)
 
 // ---- joystick
 constexpr uint8_t PIN_X      = 0;    // stick X (analog)

@@ -7,7 +7,13 @@ struct ArForm;
 struct TextLine;
 
 /*
- * ESP32-S3 Wireless Macro Pad v5.3  (Arduino IDE / arduino-esp32 core 3.x)
+ * ESP32-S3 Wireless Macro Pad v5.4  (Arduino IDE / arduino-esp32 core 3.x)
+ *
+ * NEW in v5.4: small fixes.
+ *  - Timer: pausing and going on keeps the progress bar where it was (it used to jump back to full).
+ *  - Wireless stick: a one-off electrical spike can no longer make full speed / speed boost hard to reach.
+ *    The furthest push it learned slowly settles back when the stick isn't pushed that far.
+ *  - Setup page: the games list names all 7 games; comments say 5 s for the page shown after a press.
  *
  * NEW in v5.3: firmware updates from the setup page (no USB cable).
  *  - "Firmware update" card: one area for the main board file, one for the stick file.
@@ -187,7 +193,7 @@ struct TextLine;
  *  - Joystick -> mouse (or scroll): wired, or wireless over ESP-NOW ("+ Wireless joystick").
  *    Wireless stick: click the scroll button on the stick board to turn scroll mode on/off.
  *    Scroll mode ON: stick scrolls up/down/left/right (further push = faster). OFF: stick moves the cursor.
- *  - WS2812B strip (max 32 LEDs) with 26 effects, WS2812B matrix (max 16x16) with 29 effects.
+ *  - WS2812B strip (max 256 LEDs since v4.3) with 26 effects, WS2812B matrix (max 16x16) with 29 effects.
  *  - Built-in effect buttons: GPIO39 = strip, GPIO40 = matrix.
  *      quick press = next effect, hold 0.7-3 s and release = previous, hold 3 s = turn off / on.
  *  - 3 s wait at power-on so a booster/battery can settle before the radio starts.
@@ -397,7 +403,7 @@ static volatile bool     swMode = false;                  // the timer button wo
 static volatile uint8_t  swState = SW_IDLE;
 static volatile uint32_t swStartAt = 0, swAccum = 0;      // elapsed = swAccum (+ time since swStartAt while running)
 static uint32_t swElapsed() { return swState == SW_RUN ? swAccum + (millis() - swStartAt) : swAccum; }
-constexpr const char* FW_VERSION = "5.3";
+constexpr const char* FW_VERSION = "5.4";
 static volatile bool sotaBusy = false;                    // sending a firmware file to the stick right now
 static bool sleepAllowed() { return timerState == T_IDLE && swState == SW_IDLE && !sotaBusy; }   // never sleep with a timer / stopwatch / stick update going
 
@@ -484,7 +490,7 @@ static void markUsed() { lastInput = millis(); }
 static void noteInput(const char* label) {
   lastInput = millis();
   keyPresses = keyPresses + 1;                            // key ripple / typing heat
-  pagePopupUntil = millis() + POPUP_MS;                   // a press: show the chosen page for 3 s
+  pagePopupUntil = millis() + POPUP_MS;                   // a press: show the chosen page for 5 s
   popupMedia = false;                                     // fire() sets it again for media keys
   if (label && label[0]) { strncpy(lastLabel, label, 20); lastLabel[20] = 0; }
 }
@@ -496,8 +502,9 @@ static void timerHide() {                                  // matrix back to its
   if (timerPrevFx >= 0 && curMFx == MF_TIMER) curMFx = (uint8_t)timerPrevFx;
   timerPrevFx = -1;
 }
+static bool timerResume = false;                          // paused while running: going on keeps the full length
 static void timerStop() {
-  timerState = T_IDLE; timerSetMs = 0; timerPopupUntil = 0;
+  timerState = T_IDLE; timerSetMs = 0; timerPopupUntil = 0; timerResume = false;
   timerHide();
 }
 // called from loop(): starts the timer 3 s after the last press, rings when time is up
@@ -505,7 +512,9 @@ static void timerTick() {
   const uint32_t now = millis();
   if (timerState == T_SET && now - timerTouchAt >= 3000) {
     if (timerSetMs > 0) {
-      timerState = T_RUN; timerTotalMs = timerSetMs; timerEndAt = now + timerSetMs;
+      timerTotalMs = (timerResume && (uint32_t)timerSetMs <= timerTotalMs) ? timerTotalMs : (uint32_t)timerSetMs;   // after a pause: same bar
+      timerResume = false;
+      timerState = T_RUN; timerEndAt = now + timerSetMs;
       timerPopupUntil = now + 2000;
     } else timerStop();
   } else if (timerState == T_RUN && timerRemaining() == 0) {
@@ -647,7 +656,7 @@ static void amsNotify(NimBLERemoteCharacteristic*, uint8_t* d, size_t len, bool)
   else if (ent == 0 && attr == 1) { media.state = (int8_t)num; media.rate = rate; media.elapsed = elapsed; media.infoAt = nowMs; }
   else if (ent == 0 && attr == 2) { if (num != media.vol) { show = true; media.vol = (int8_t)num; } }
   portEXIT_CRITICAL(&mediaMux);
-  if (show && (int32_t)(millis() - amsQuietUntil) > 0) {   // song or volume changed: show the Media page for 3 s
+  if (show && (int32_t)(millis() - amsQuietUntil) > 0) {   // song or volume changed: show the Media page for 5 s
     lastMediaKey = 0;                                     // not a key press: show the play state instead
     popupMedia = true;
     pagePopupUntil = millis() + POPUP_MS;
@@ -1164,7 +1173,7 @@ public:
         if (!taps) firstAt = now;
         if (!swMode) {
           if (timerState == T_ALARM)    { timerStop(); swallow = true; }
-          else if (timerState == T_RUN) { timerSetMs = timerRemaining(); timerState = T_SET; swallow = true; }   // pause: back to setting
+          else if (timerState == T_RUN) { timerSetMs = timerRemaining(); timerState = T_SET; timerResume = true; swallow = true; }   // pause: back to setting
           else if (timerState == T_IDLE){ timerState = T_SET; timerSetMs = 0; timerShow(); }
           touch();
           if (!taps) firstSwallowed = swallow;
@@ -1557,9 +1566,13 @@ class Joystick : public Component {
   float boostMax = 1, boostCur = 1;                         // speed boost when the stick is pushed all the way
   float pk[4] = {1300, 1300, 1300, 1300};                   // how far the stick really goes: +x, -x, +y, -y (learned)
   float reach(float v, uint8_t axis) {                      // learns the furthest push in this direction and returns it
-    float& p = pk[axis * 2 + (v < 0 ? 1 : 0)];
+    const uint8_t i = axis * 2 + (v < 0 ? 1 : 0);
+    float& o = pk[i ^ 1];                                   // the other direction slowly settles back (about 2 min),
+    if (o > 1300) o -= (o - 1300) * 0.0001f;                // so a one-off spike can't block full speed for good
+    float& p = pk[i];
     const float a = fabsf(v);
-    if (a > p) p = a;
+    if (a > p) p = a;                                       // pushed further: learned at once
+    else if (a < p * 0.5f && p > 1300) p -= (p - 1300) * 0.0001f;
     return p;
   }
   uint32_t last = 0, lastChange = 0; bool swRaw = HIGH, swStable = HIGH;
@@ -4469,7 +4482,7 @@ function render(){
   ${sel('Mirror horizontally','matrix.flipX',M.flipX,yn,1)}${sel('Mirror vertically','matrix.flipY',M.flipY,yn,1)}
   ${fld('Scrolling text (effect "text"). {time} = the clock, {song} = the song playing','matrix.text',M.text,0,'maxlength=60')}
   ${sel('Text speed','matrix.tspeed',M.tspeed,SPD,1)}${sel('Game speed','matrix.gspeed',M.gspeed,SPD,1)}
-  <small>Games (snake, pong, breakout, dodge) are played with the joystick while they are on the matrix; the mouse works again when you pick another effect. Effect "timer" shows the timer button's countdown.</small>
+  <small>Games (snake, pong, breakout, dodge, tetris, flappy, invaders) are played with the joystick while they are on the matrix; the mouse works again when you pick another effect. Effect "timer" shows the timer button's countdown.</small>
   <small>Button on GPIO 40: press = next effect, hold 0.7-3 s then release = previous, hold 3 s = off / on.</small></div>
   <div class=card><h3>OLED</h3>${sel('Display','oled.on',O.on,[[1,'On'],[0,'Off']],1)}${fld('Brightness (0-255)','oled.bright',O.bright,1)}
   ${sel('Rotation','oled.rot',O.rot,[[0,'Normal'],[1,'180 degrees']],1)}${fld('Sleep after N seconds idle (0 = never)','oled.sleep',O.sleep,1)}
