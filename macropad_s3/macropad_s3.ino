@@ -9,6 +9,13 @@ struct TextLine;
 /*
  * ESP32-S3 Wireless Macro Pad v5.5  (Arduino IDE / arduino-esp32 core 3.x)
  *
+ * NEW in v6.2: wireless updates for your other controllers; the wired flasher (v5.5-6.1) is gone.
+ *  - Any ESP32 board whose sketch includes PadOTA.h (in the GitHub repository) says hello to the pad by radio.
+ *    The setup page lists those controllers ("Wireless controllers" card); pick a file for one and it is sent by
+ *    radio (ESP-NOW) the next time that controller is on, like the stick update. The OLED shows the progress.
+ *  - The first upload of a new controller (with PadOTA.h in it) is done once by USB, e.g. from a phone.
+ *  - "Listen for wireless controllers" in the General card (on by default) keeps the pad's radio on for this.
+ *
  * NEW in v6.1: the flasher can also use 4 wires instead of USB: pad TX -> board RX, pad RX <- board TX, a pad pin
  *  -> the board's EN (reset) and one -> its BOOT pin. Works with every ESP32 chip, even a brand-new one. Pick the
  *  connection and the 4 pins in the setup page's flasher card.
@@ -287,10 +294,6 @@ struct TextLine;
 #include <NimBLEHIDDevice.h>
 #include <Update.h>
 #include <FFat.h>
-#include <MD5Builder.h>
-#include <usb/usb_host.h>
-#include <freertos/stream_buffer.h>
-#include <soc/usb_serial_jtag_reg.h>
 
 #define USE_OLED 1
 #define OLED_HW_I2C 1      // 1 = hardware I2C (recommended), 0 = software I2C (old behaviour)
@@ -435,7 +438,7 @@ static volatile bool     swMode = false;                  // the timer button wo
 static volatile uint8_t  swState = SW_IDLE;
 static volatile uint32_t swStartAt = 0, swAccum = 0;      // elapsed = swAccum (+ time since swStartAt while running)
 static uint32_t swElapsed() { return swState == SW_RUN ? swAccum + (millis() - swStartAt) : swAccum; }
-constexpr const char* FW_VERSION = "6.1";
+constexpr const char* FW_VERSION = "6.2";
 static volatile bool sotaBusy = false;                    // sending a firmware file to the stick right now
 static bool sleepAllowed() { return timerState == T_IDLE && swState == SW_IDLE && !sotaBusy; }   // never sleep with a timer / stopwatch / stick update going
 
@@ -1372,8 +1375,25 @@ static bool stickAllowed(const esp_now_recv_info_t* info) {
 }
 
 static void sotaRx(const esp_now_recv_info_t* info, const uint8_t* d, int len);
+// ---- other controllers (sketches with PadOTA.h): hello = magic 0xD1, update answers = 0xD2, pad -> controller = 0xD0
+struct __attribute__((packed)) CtlHello { uint8_t magic; uint16_t chip; char name[16]; char ver[12]; };
+struct CtlInfo { uint8_t mac[6]; uint16_t chip; char name[16]; char ver[12]; };
+constexpr uint8_t MAX_CTL = 8;
+static CtlInfo  ctls[MAX_CTL];                            // kept in flash ("ctls"), so the setup page lists them too
+static uint32_t ctlSeen[MAX_CTL], ctlRetryAt[MAX_CTL];
+static bool     ctlPend[MAX_CTL];
+static bool     ctlListen = true, radioOn = false, ctlDirty = false;
+static volatile bool ctlHelloNew = false;
+static CtlHello ctlHelloIn;
+static uint8_t  ctlHelloMac[6];
+static void cotaRx(const esp_now_recv_info_t* info, const uint8_t* d, int len);
 static void onJoyRecv(const esp_now_recv_info_t* info, const uint8_t* d, int len) {
   if (len >= 2 && d[0] == 0xC1) { sotaRx(info, d, len); return; }   // stick firmware update answer
+  if (len == (int)sizeof(CtlHello) && d[0] == 0xD1) {               // a controller says hello (handled in loop)
+    if (!ctlHelloNew && info && info->src_addr) { memcpy(&ctlHelloIn, d, sizeof ctlHelloIn); memcpy(ctlHelloMac, info->src_addr, 6); ctlHelloNew = true; }
+    return;
+  }
+  if (len >= 2 && d[0] == 0xD2) { cotaRx(info, d, len); return; }  // a controller's update answer
   if (len == (int)sizeof(JoyPkt2) || len == (int)sizeof(JoyPkt2) - 1) {   // stick v2.5+ (v2.4 has no fx byte)
     JoyPkt2 p; p.fx = 254; memcpy(&p, d, len);
     if (p.magic != 0xA6 || !stickAllowed(info)) return;     // not our stick
@@ -1466,6 +1486,8 @@ static volatile uint32_t sotaAckNext = 0;
 static char     stickVer[12] = "";                        // the stick's firmware version (from its answer)
 static volatile bool stickVerNew = false;
 static char     sotaL1[17] = "", sotaL2[17] = "";         // result on the OLED
+static char     sotaTitle[17] = "STICK UPDATE";           // OLED title while sending (the stick or a controller's name)
+static uint8_t* sotaDest = nullptr;                       // who gets the packets (the stick unless a controller is updated)
 static volatile uint32_t sotaMsgUntil = 0;
 
 static void sotaRx(const esp_now_recv_info_t* info, const uint8_t* d, int len) {
@@ -1480,7 +1502,7 @@ static void sotaRx(const esp_now_recv_info_t* info, const uint8_t* d, int len) {
 static bool sotaCall(const uint8_t* p, size_t n, uint8_t op, uint32_t waitMs, uint8_t tries) {
   for (uint8_t t = 0; t < tries; t++) {
     sotaGotAck = false;
-    esp_now_send(stickMac, p, n);
+    esp_now_send(sotaDest ? sotaDest : stickMac, p, n);
     const uint32_t t0 = millis();
     while (millis() - t0 < waitMs) {
       if (sotaGotAck && sotaAckOp == op) return true;
@@ -1496,6 +1518,7 @@ static void sotaFail(const char* l2) {
   sotaResult = 3;
 }
 static void stickOtaTask(void*) {
+  sotaDest = stickMac; strlcpy(sotaTitle, "STICK UPDATE", sizeof sotaTitle);
   addStickPeer();
   OtaHdr h = {0xC0, 1, 0, 0};
   File f;
@@ -1586,6 +1609,144 @@ static void stickOtaResult() {
   }
   prefs.putString("sbmsg", msg);
   Serial.printf("Stick update: %s\n", msg);
+}
+
+// ---- Wireless updates for other controllers (their sketch includes PadOTA.h)
+// A controller says hello every 2 s (chip, name, version). A file uploaded for it in the setup page is kept as
+// /ctlN.bin and sent the next time it is heard, with the same steps as the stick update (magic 0xD0 / 0xD2).
+static int8_t   cotaIdx = -1;
+static uint8_t  cotaMac[6];
+static uint32_t cotaSize = 0, cotaCrc = 0;
+static volatile uint8_t cotaResult = 0;                  // 1 done, 3 failed
+static String ctlKey(const char* p, int i) { return String(p) + i; }
+static bool ctlUsed(int i) { const uint8_t* m = ctls[i].mac; return (m[0] | m[1] | m[2] | m[3] | m[4] | m[5]) != 0; }
+static const char* ctlChipName(uint16_t c) {
+  return c == 0 ? "ESP32" : c == 2 ? "ESP32-S2" : c == 5 ? "ESP32-C3" : c == 9 ? "ESP32-S3" : c == 13 ? "ESP32-C6" : "ESP32 (other)";
+}
+static void ctlLoad() {
+  memset(ctls, 0, sizeof ctls);
+  if (prefs.getBytesLength("ctls") == sizeof ctls) prefs.getBytes("ctls", ctls, sizeof ctls);
+  for (int i = 0; i < MAX_CTL; i++) { ctls[i].name[15] = 0; ctls[i].ver[11] = 0; }
+}
+static void addPeerMac(const uint8_t* mac) {
+  if (esp_now_is_peer_exist(mac)) return;
+  esp_now_peer_info_t p = {};
+  memcpy(p.peer_addr, mac, 6); p.channel = 0; p.ifidx = WIFI_IF_STA; p.encrypt = false;
+  esp_now_add_peer(&p);
+}
+static void cotaRx(const esp_now_recv_info_t* info, const uint8_t* d, int len) {
+  if (!info || !info->src_addr || cotaIdx < 0 || memcmp(info->src_addr, cotaMac, 6) != 0 || len < (int)sizeof(OtaAck)) return;
+  OtaAck a; memcpy(&a, d, sizeof a);
+  sotaAckOp = a.op; sotaAckSt = a.status; sotaAckNext = a.next; sotaGotAck = true;
+}
+static void cotaFail(const char* l2) {
+  OtaHdr c = {0xD0, 5, 0, 0};
+  esp_now_send(cotaMac, (const uint8_t*)&c, sizeof c);     // tell it to drop what it got (its old code keeps running)
+  strlcpy(sotaL1, "FAILED", sizeof sotaL1); strlcpy(sotaL2, l2, sizeof sotaL2);
+  cotaResult = 3;
+}
+static void ctlOtaTask(void*) {
+  const int idx = cotaIdx;
+  sotaDest = cotaMac;
+  addPeerMac(cotaMac);
+  char path[16]; snprintf(path, sizeof path, "/ctl%d.bin", idx);
+  OtaHdr h = {0xD0, 1, 0, 0};
+  File f;
+  if (!sotaCall((const uint8_t*)&h, sizeof h, 1, 200, 10)) { cotaFail("NOT ANSWERING"); goto done; }
+  f = FFat.open(path, FILE_READ);
+  if (!f || f.size() != cotaSize) { cotaFail("FILE MISSING"); goto done; }
+  h = {0xD0, 2, cotaSize, cotaCrc};
+  if (!sotaCall((const uint8_t*)&h, sizeof h, 2, 3000, 3)) { cotaFail("NO ANSWER"); goto done; }
+  if (sotaAckSt) { cotaFail("FILE TOO BIG"); goto done; }
+  {
+    uint8_t pkt[6 + OTA_CHUNK];
+    pkt[0] = 0xD0; pkt[1] = 3;
+    uint32_t off = 0; uint8_t fails = 0;
+    while (off < cotaSize) {
+      const uint32_t n = min<uint32_t>(OTA_CHUNK, cotaSize - off);
+      memcpy(pkt + 2, &off, 4);
+      if (!f.seek(off) || f.read(pkt + 6, n) != n) { cotaFail("READ ERROR"); goto done; }
+      if (!sotaCall(pkt, 6 + n, 3, 400, 1)) { if (++fails > 25) { cotaFail("GONE AWAY"); goto done; } continue; }
+      if (sotaAckSt) { cotaFail("WRITE ERROR"); goto done; }
+      const uint32_t nx = sotaAckNext;
+      if (nx == off + n) { off = nx; fails = 0; }
+      else if (nx <= cotaSize && nx % OTA_CHUNK == 0) { off = nx; if (++fails > 25) { cotaFail("OUT OF STEP"); goto done; } }
+      else if (++fails > 25) { cotaFail("OUT OF STEP"); goto done; }
+      sotaPct = (int8_t)((uint64_t)off * 100 / cotaSize);
+      markUsed();
+    }
+  }
+  h = {0xD0, 4, 0, 0};
+  if (!sotaCall((const uint8_t*)&h, sizeof h, 4, 8000, 2)) { cotaFail("NO ANSWER"); goto done; }
+  if (sotaAckSt) { cotaFail(sotaAckSt == 3 ? "DATA CHANGED" : "CHECK FAILED"); goto done; }
+  sotaPct = 100;
+  strlcpy(sotaL1, "DONE", sizeof sotaL1); strlcpy(sotaL2, "restarting it", sizeof sotaL2);
+  cotaResult = 1;
+done:
+  if (f) f.close();
+  sotaMsgUntil = millis() + 6000;
+  sotaPct = -1; markUsed();
+  sotaDest = nullptr;
+  sotaBusy = false;
+  vTaskDelete(nullptr);
+}
+// from loop(): learn controllers from their hellos, keep the list, start a waiting update when one is heard
+static void ctlTick() {
+  const uint32_t now = millis();
+  if (ctlHelloNew) {
+    CtlHello h = ctlHelloIn; uint8_t mac[6]; memcpy(mac, ctlHelloMac, 6);
+    ctlHelloNew = false;
+    h.name[15] = 0; h.ver[11] = 0;
+    int idx = -1, freeI = -1;
+    for (int i = 0; i < MAX_CTL; i++) {
+      if (ctlUsed(i)) { if (memcmp(ctls[i].mac, mac, 6) == 0) idx = i; }
+      else if (freeI < 0) freeI = i;
+    }
+    if (idx < 0 && freeI >= 0) {
+      idx = freeI; memset(&ctls[idx], 0, sizeof ctls[idx]); memcpy(ctls[idx].mac, mac, 6); ctlDirty = true;
+      Serial.printf("New controller: %s (%s)\n", h.name, ctlChipName(h.chip));
+    }
+    if (idx >= 0) {
+      if (strcmp(ctls[idx].name, h.name) || strcmp(ctls[idx].ver, h.ver) || ctls[idx].chip != h.chip) {
+        strlcpy(ctls[idx].name, h.name, sizeof ctls[idx].name); strlcpy(ctls[idx].ver, h.ver, sizeof ctls[idx].ver);
+        ctls[idx].chip = h.chip; ctlDirty = true;
+      }
+      ctlSeen[idx] = now ? now : 1;
+    }
+  }
+  static uint32_t lastSave = 0;
+  if (ctlDirty && now - lastSave > 5000) { lastSave = now; ctlDirty = false; prefs.putBytes("ctls", ctls, sizeof ctls); }
+  if (sotaBusy || !ffatOk) return;
+  for (int i = 0; i < MAX_CTL; i++) {
+    if (!ctlUsed(i) || !ctlPend[i] || !ctlSeen[i] || now - ctlSeen[i] > 3000 || (int32_t)(now - ctlRetryAt[i]) < 0) continue;
+    cotaIdx = i; memcpy(cotaMac, ctls[i].mac, 6);
+    cotaSize = prefs.getUInt(ctlKey("cs", i).c_str(), 0); cotaCrc = prefs.getUInt(ctlKey("cc", i).c_str(), 0);
+    if (!cotaSize) { ctlPend[i] = false; continue; }
+    strlcpy(sotaTitle, ctls[i].name[0] ? ctls[i].name : "CONTROLLER", sizeof sotaTitle);
+    for (char* c = sotaTitle; *c; c++) *c = toupper((unsigned char)*c);
+    sotaBusy = true; sotaPct = 0; cotaResult = 0; markUsed();
+    Serial.printf("Controller update: sending to %s...\n", ctls[i].name);
+    if (xTaskCreatePinnedToCore(ctlOtaTask, "cota", 6144, nullptr, 1, nullptr, 1) != pdPASS) sotaBusy = false;
+    break;
+  }
+}
+// from loop(): keep the result of a controller update
+static void ctlResult() {
+  const uint8_t r = cotaResult;
+  if (!r || cotaIdx < 0) return;
+  cotaResult = 0;
+  const int i = cotaIdx;
+  char msg[48];
+  if (r == 1) {
+    char path[16]; snprintf(path, sizeof path, "/ctl%d.bin", i);
+    FFat.remove(path); prefs.putUChar(ctlKey("cp", i).c_str(), 0); ctlPend[i] = false;
+    snprintf(msg, sizeof msg, "done");
+  } else {
+    ctlRetryAt[i] = millis() + 60000;
+    snprintf(msg, sizeof msg, "failed (%s), tries again", sotaL2);
+  }
+  prefs.putString(ctlKey("cm", i).c_str(), msg);
+  Serial.printf("Controller update (%s): %s\n", ctls[i].name, msg);
 }
 
 // Analog joystick -> mouse movement (or scroll). Wired (ADC1 pins 1-10) or wireless (ESP-NOW).
@@ -3109,7 +3270,7 @@ static void clockTask(void*) {
   }
   if (!ok) { ckLastFail = time(nullptr); if (!ckLastFail) ckLastFail = 1; }
   if (esp_sntp_enabled()) esp_sntp_stop();
-  if (needRemote) {                                      // keep the radio on for the stick: back to its channel
+  if (radioOn) {                                         // keep the radio on for the stick / controllers: back to channel 1
     WiFi.disconnect();
     esp_wifi_set_channel(1, WIFI_SECOND_CHAN_NONE);
   } else {
@@ -3949,7 +4110,7 @@ static void oledTick() {
     oled.clearBuffer();
     oled.setFontMode(1); oled.setDrawColor(1);
     oled.setFont(u8g2_font_5x8_tr);
-    oled.drawStr((64 - oled.getStrWidth("STICK UPDATE")) / 2, 9, "STICK UPDATE");
+    oled.drawStr((64 - oled.getStrWidth(sotaTitle)) / 2, 9, sotaTitle);
     if (sotaBusy) {
       const int p = sotaPct < 0 ? 0 : sotaPct;
       char tb[8]; snprintf(tb, sizeof tb, "%d%%", p);
@@ -4333,6 +4494,7 @@ static void applyConfig(JsonDocument& d) {
 
   batPin = (int8_t)constrain((int)(d["batPin"] | -1), -1, 10);
   batSaver = (int)(d["batSave"] | 1) != 0;
+  ctlListen = (int)(d["ctlon"] | 1) != 0;
   if (batPin >= 0) analogSetPinAttenuation(batPin, ADC_11db);
   profileMode = constrain((int)(d["pmode"] | 0), 0, 2);   // before the actions: PC actions depend on pswap
   pcSwapCmd = (int)(d["pswap"] | 1) != 0;
@@ -4494,6 +4656,7 @@ const TZ=[['Beirut','EET-2EEST,M3.5.0/0,M10.5.0/0'],['UTC','UTC0'],['London','GM
 function render(){
   const L=cfg.led,M=cfg.matrix,O=cfg.oled,K=cfg.clock;
   let h=`<div class=card><h3>General</h3>${fld('Device name (Bluetooth)','name',cfg.name)}${fld('LED power limit in mA (USB is about 500)','power',cfg.power,1)}
+  ${sel('Listen for wireless controllers (to update them by radio)','ctlon',cfg.ctlon,[[1,'On'],[0,'Off (saves a little battery if you have none)']],1)}
   ${sel('Device mode','pmode',cfg.pmode,[[0,'Automatic (iPad found = iPad mode, else PC mode)'],[1,'Always iPad'],[2,'Always PC']],1)}
   ${sel('In PC mode, turn gui (Cmd) into Ctrl','pswap',cfg.pswap,[[1,'Yes (gui+c becomes ctrl+c)'],[0,'No']],1)}
   ${fld('Battery pin (ADC1: GPIO 1-10, -1 = no battery)','batPin',cfg.batPin,1)}
@@ -4574,13 +4737,8 @@ function render(){
   <small>In the Arduino IDE pick the right board in Tools, then Sketch &gt; Export Compiled Binary. Use the file that ends in <b>.ino.bin</b> in the sketch's build folder (not .merged.bin, .bootloader.bin or .partitions.bin). Each area only takes the file for its own board.<br>
   Main board: installed at once, then the pad restarts in Bluetooth mode (your settings stay).<br>
   Stick: kept on the pad and sent over the wireless link the next time the stick is on and left still for 2 s (about a minute; its strip fills up purple, the OLED shows the progress). The stick needs code v3.0 or newer, uploaded by USB once. The stick's own Partition Scheme must have room for updates (the default one does).</small></div>
-  <div class=card><h3>Flash a board on the USB port</h3><small id=flv>${flInfo()}</small>
-  <label>Board file: ESP32, ESP32-S3, C3 or C6 (.ino.bin, or .merged.bin for a blank board)<input type=file id=ftg accept=".bin"></label><button class=p onclick="upTg()">Save file</button>
-  <label>Connection<select id=flm onchange="FL.mode=Number(this.value);render()"><option value=0 ${FL.mode==1?'':'selected'}>USB port (GPIO19 / 20)</option><option value=1 ${FL.mode==1?'selected':''}>4 wires: TX, RX, EN, BOOT</option></select></label>
-  ${FL.mode==1?`<label>Pad TX pin (to the board's RX)<input id=fltx type=number value="${FL.tx??17}"></label><label>Pad RX pin (to the board's TX)<input id=flrx type=number value="${FL.rx??18}"></label><label>Pad pin to the board's EN / RST<input id=flen type=number value="${FL.en??16}"></label><label>Pad pin to the board's BOOT (GPIO0; GPIO9 on C3 / C6)<input id=flboot type=number value="${FL.boot??15}"></label><small>4 wires: pad TX &rarr; board RX (U0RXD), pad RX &larr; board TX (U0TXD), plus EN, BOOT and GND. Power the board from its 5V pin (or its own USB port), not from a port with a USB chip on the same RX / TX pins.</small>`:''}
-  ${FL.file?'<button class=p onclick="startFlash()">Start flashing</button><button onclick="delTg()">Delete file</button>':''}
-  <div id=flst class=err></div>
-  <small>For ESP32, ESP32-S3, C3 and C6 boards: on a port with a CP2102, CH340 or CH9102 USB chip, or on the S3 / C3 / C6 chip's own USB port. Export the board's sketch with its own board picked in Tools. <b>Start flashing</b> restarts the pad as a USB flasher (no Bluetooth meanwhile). Plug the board into the pad's USB-C port marked <b>USB</b> (not UART / COM) with an OTG adapter or USB-C cable; follow the OLED. The board needs 5 V from that port: bridge the USB-OTG pads on the S3 board if it has them, or use an OTG adapter with power in. When it is done the board restarts with its new code and the pad goes back to Bluetooth mode. A .ino.bin keeps the board's bootloader and partitions (it must have had an Arduino sketch before); use .merged.bin for a brand-new board.</small></div>
+  <div class=card><h3>Wireless controllers</h3>${ctlList()}<div id=ctst class=err></div>
+  <small>Boards whose sketch includes <b>PadOTA.h</b> (from the GitHub repository) show up here once the pad has heard them (outside this setup mode, with "Listen for wireless controllers" on). Pick the controller's new <b>.ino.bin</b> and tap Send: it is kept on the pad and sent by radio the next time that controller is on (the OLED shows the progress). The first upload of a new controller is done once by USB.</small></div>
   <div class=card><h3>Backup / restore</h3><button onclick="backup()">Show backup</button><button onclick="restoreBox()">Restore a backup</button><div id=bk></div>
   <small>The backup has your whole setup except the Wi-Fi password. Restoring loads it into this page; press Save & Restart to keep it.</small></div>
   <small>Allowed pins: 1,2,4-11,14-18. Pots and joystick axes: 1-10 only. Reserved: 21 (mode), 38 (strip), 39/40 (effect buttons), 47 (matrix), 41/42 (OLED), 12/13 (LED power switches).</small>`;
@@ -4597,7 +4755,7 @@ const D={button:{type:'button',pin:4,action:'copy',rep:0,long:'',dbl:'',fnAction
 function add(t){cfg.components.push({...D[t]});render()}
 function del(i){cfg.components.splice(i,1);render()}
 function norm(c){
-  c.name=c.name||'MacroPad';c.power=c.power||500;c.pmode=c.pmode??0;c.pswap=c.pswap??1;c.batPin=c.batPin??-1;c.batSave=c.batSave??1;
+  c.name=c.name||'MacroPad';c.power=c.power||500;c.pmode=c.pmode??0;c.pswap=c.pswap??1;c.batPin=c.batPin??-1;c.batSave=c.batSave??1;c.ctlon=c.ctlon??1;
   c.led=Object.assign({count:8,bright:60,hue:160,fx:'breathe',speed:128},c.led);
   c.matrix=Object.assign({w:0,h:0,bright:40,hue:96,fx:'plasma',speed:128,serp:1,vert:0,flipX:0,flipY:0,text:'MacroPad',gspeed:3,tspeed:3},c.matrix);
   c.oled=Object.assign({on:1,bright:128,rot:0,sleep:0,page:0,home:'clock',text:'MacroPad'},c.oled);
@@ -4629,46 +4787,27 @@ function loadBk(){let c;try{c=JSON.parse(bkt.value);}catch(e){alert('That is not
   if(!c||!Array.isArray(c.components)){alert('That is not a MacroPad backup.');return;}
   c.clock=Object.assign({},c.clock,{pass:'',passSet:cfg.clock.passSet});cfg=norm(c);render();
   alert('Backup loaded. Check it, then press Save & Restart.');}
-let STICK={mac:''},OTA={},FL={};
-function flInfo(){const o=FL;let s=o.file?'Saved: <b>'+o.file+'</b> ('+(o.chip||'ESP32')+', '+Math.round(o.size/1024)+' KB, written at 0x'+Number(o.addr).toString(16)+')':'No file saved yet.';if(o.msg)s+='<br>Last time: '+o.msg;return s;}
-async function loadFl(){try{FL=await (await fetch('/api/flash')).json();}catch(e){FL={};}render();}
-function upTg(){
-  const f=document.getElementById('ftg').files[0],st=document.getElementById('flst');
+let STICK={mac:''},OTA={},CT=[];
+function ctlList(){if(!CT.length)return '<small>No controllers heard yet.</small>';
+  return CT.map(c=>`<div style="border-top:1px solid #333;padding-top:8px;margin-top:8px"><b>${esc(c.name)||'controller'}</b> <small style="display:inline">${c.chip} &middot; v${esc(c.ver)} &middot; ${c.mac}</small>`
+   +(c.pend?`<br><small style="display:inline"><b>Update waiting</b> (${Math.round(c.size/1024)} KB): sent when it is on.</small>`:'')
+   +(c.msg?`<br><small style="display:inline">Last update: ${esc(c.msg)}</small>`:'')
+   +`<label>New file<input type=file id=cf${c.i} accept=".bin"></label><button class=p onclick="upCtl(${c.i})">Send</button>`
+   +(c.pend?`<button onclick="ctlPost('cancel',${c.i})">Cancel update</button>`:'')+`<button onclick="if(confirm('Forget this controller?'))ctlPost('forget',${c.i})">Forget</button></div>`).join('');}
+async function loadCt(){try{CT=await (await fetch('/api/ctls')).json();}catch(e){CT=[];}render();}
+async function ctlPost(a,i){await fetch('/api/ctl/'+a+'?i='+i,{method:'POST'});loadCt();}
+function upCtl(i){
+  const f=document.getElementById('cf'+i).files[0],st=document.getElementById('ctst');
   if(!f){alert('Choose a .bin file first.');return;}
   const fd=new FormData();fd.append('f',f,f.name);
-  const x=new XMLHttpRequest();x.open('POST','/api/flash/file');
+  const x=new XMLHttpRequest();x.open('POST','/api/ctl/file?i='+i);
   x.upload.onprogress=e=>{if(e.lengthComputable)st.textContent='Uploading '+Math.round(e.loaded*100/e.total)+' % ...';};
-  x.onload=()=>{if(x.status==200)loadFl();else st.textContent='Not saved: '+x.responseText;};
-  x.onerror=()=>{st.textContent='Upload failed (the connection was lost). Try again.';};
-  st.textContent='Uploading 0 % ...';x.send(fd);
-}
-async function startFlash(){
-  const m=Number(document.getElementById('flm').value),v=id=>Number(document.getElementById(id).value);
-  const body=m==1?{mode:1,tx:v('fltx'),rx:v('flrx'),en:v('flen'),boot:v('flboot')}:{mode:0};
-  if(!confirm('The pad restarts as a flasher (no Bluetooth meanwhile). '+(m==1?'Connect the 4 wires and GND':'Plug the board into its USB port')+' and follow the OLED. Start?'))return;
-  const r=await fetch('/api/flash/start',{method:'POST',body:JSON.stringify(body)});
-  if(r.ok)app.innerHTML='<h3>Restarting as a USB flasher. Plug the board in and follow the OLED.</h3>';else alert(await r.text());
-}
-async function delTg(){await fetch('/api/flash/delete',{method:'POST'});loadFl();}
-function fwInfo(){const o=OTA;if(!o.pad)return '';return 'Main board: v'+o.pad+' &middot; Stick: '+(o.stick?'v'+o.stick:'not heard yet')
-  +(o.pend?'<br><b>Stick update waiting</b> ('+Math.round(o.size/1024)+' KB): it is sent when the stick is on.'+(o.remote?'':' Add the Wireless joystick card first.'):'')
-  +(o.msg?'<br>Last stick update: '+o.msg:'')+(o.fs?'':'<br>Stick updates need the Partition Scheme "16M Flash (3MB APP/9.9MB FATFS)".');}
-async function loadOta(){try{OTA=await (await fetch('/api/ota')).json();}catch(e){OTA={};}render();}
-async function cancelStick(){await fetch('/api/ota/stickcancel',{method:'POST'});loadOta();}
-function upFw(k){
-  const f=document.getElementById(k=='pad'?'fpad':'fstick').files[0],st=document.getElementById('fwst');
-  if(!f){alert('Choose a .bin file first.');return;}
-  if(/merged|bootloader|partitions/i.test(f.name)&&!confirm(f.name+' looks like the wrong file: the right one ends in .ino.bin. Send it anyway?'))return;
-  if(k=='pad'&&!confirm('Update the main board now? It restarts when it is done.'))return;
-  const fd=new FormData();fd.append('f',f,f.name);
-  const x=new XMLHttpRequest();x.open('POST','/api/ota/'+k);
-  x.upload.onprogress=e=>{if(e.lengthComputable)st.textContent='Uploading '+Math.round(e.loaded*100/e.total)+' % ...';};
-  x.onload=()=>{if(x.status==200){if(k=='pad')app.innerHTML='<h3>Main board updated. Restarting in Bluetooth mode...</h3>';else{alert('Stick file saved on the pad. It is sent to the stick the next time both are on (outside this setup mode).');loadOta();}}else st.textContent='Not updated: '+x.responseText;};
+  x.onload=()=>{if(x.status==200){st.textContent='';alert('Saved on the pad. It is sent to the controller the next time both are on (outside this setup mode).');loadCt();}else st.textContent='Not saved: '+x.responseText;};
   x.onerror=()=>{st.textContent='Upload failed (the connection was lost). Try again.';};
   st.textContent='Uploading 0 % ...';x.send(fd);
 }
 async function forget(){await fetch('/api/forgetstick',{method:'POST'});STICK.mac='';render();}
-Promise.all([fetch('/api/config').then(r=>r.json()),fetch('/api/fx').then(r=>r.json()),fetch('/api/stick').then(r=>r.json()).catch(()=>({mac:''})),fetch('/api/ota').then(r=>r.json()).catch(()=>({})),fetch('/api/flash').then(r=>r.json()).catch(()=>({}))]).then(([c,f,k,o,l])=>{FX=f;STICK=k;OTA=o;FL=l;cfg=norm(c);render()});
+Promise.all([fetch('/api/config').then(r=>r.json()),fetch('/api/fx').then(r=>r.json()),fetch('/api/stick').then(r=>r.json()).catch(()=>({mac:''})),fetch('/api/ota').then(r=>r.json()).catch(()=>({})),fetch('/api/ctls').then(r=>r.json()).catch(()=>([]))]).then(([c,f,k,o,t])=>{FX=f;STICK=k;OTA=o;CT=t;cfg=norm(c);render()});
 </script></body></html>)HTML";
 
 static void restartInto(bool toConfig) {
@@ -4750,49 +4889,44 @@ static void otaStickUpload() {
   }
 }
 
-// "Flash a board on the USB port": the classic ESP32 file is kept in /target.bin. App files go to 0x10000
-// (the board keeps its bootloader); a merged file (Arduino .merged.bin) holds everything and goes to 0x0.
-static void tgUpload() {
+// a file for a controller: it must be an app file for that controller's chip
+static int ctlUpIdx = -1;
+static void ctlUpload() {
   HTTPUpload& u = server.upload();
   if (u.status == UPLOAD_FILE_START) {
-    otaErr = ""; otaBytes = 0;
+    otaErr = ""; otaFirst = true; otaBytes = 0; otaCrcAcc = 0;
+    ctlUpIdx = server.arg("i").toInt();
+    if (ctlUpIdx < 0 || ctlUpIdx >= MAX_CTL || !ctlUsed(ctlUpIdx)) { otaErr = "Unknown controller"; return; }
     if (!ffatOk) { otaErr = "No room to keep the file: set Tools > Partition Scheme to \"16M Flash (3MB APP/9.9MB FATFS)\"."; return; }
-    FFat.remove("/target.tmp");
-    otaFile = FFat.open("/target.tmp", FILE_WRITE);
+    FFat.remove("/ctl.tmp");
+    otaFile = FFat.open("/ctl.tmp", FILE_WRITE);
     if (!otaFile) otaErr = "Can't save the file on the pad";
   } else if (u.status == UPLOAD_FILE_WRITE) {
     if (otaErr.length()) return;
-    if (otaBytes + u.currentSize > 4194304UL) { otaErr = "The file is too big (max 4 MB)"; return; }
+    if (otaFirst) {
+      otaFirst = false;
+      const uint8_t* d = u.buf; const size_t n = u.currentSize;
+      uint32_t mg = 0; if (n >= 36) memcpy(&mg, d + 32, 4);
+      const uint16_t id = n >= 14 ? (d[12] | (d[13] << 8)) : 0xFFFF, want = ctls[ctlUpIdx].chip;
+      if (n < 36 || d[0] != 0xE9) otaErr = "This is not a firmware file. Use the .ino.bin from Sketch > Export Compiled Binary.";
+      else if (id != want) otaErr = String("This file is for ") + ctlChipName(id) + ", but that controller is an " + ctlChipName(want) + ".";
+      else if (mg != 0xABCD5432u) otaErr = "This is not the app file. Use the one that ends in .ino.bin (not merged, bootloader or partitions).";
+      if (otaErr.length()) return;
+    }
+    if (otaBytes + u.currentSize > 4000000UL) { otaErr = "The file is too big"; return; }
     if (otaFile.write(u.buf, u.currentSize) != u.currentSize) { otaErr = "Can't save the file on the pad (full?)"; return; }
-    otaBytes += u.currentSize;
+    otaCrcAcc = crc32Add(otaCrcAcc, u.buf, u.currentSize); otaBytes += u.currentSize;
   } else if (u.status == UPLOAD_FILE_END || u.status == UPLOAD_FILE_ABORTED) {
     if (otaFile) otaFile.close();
     if (u.status == UPLOAD_FILE_ABORTED) otaErr = "Upload interrupted";
-    uint32_t addr = 0xFFFFFFFF; uint16_t tgId = 0;
-    if (!otaErr.length()) {
-      uint8_t h[40] = {0}, h2[16] = {0}, h3[40] = {0};
-      File r = FFat.open("/target.tmp", FILE_READ);
-      if (r) {
-        r.read(h, sizeof h);
-        if (otaBytes > 0x1010 && r.seek(0x1000)) r.read(h2, sizeof h2);
-        if (otaBytes > 0x10040 && r.seek(0x10000)) r.read(h3, sizeof h3);
-        r.close();
-      }
-      auto chipOk = [](uint16_t c) { return c == 0 || c == 5 || c == 9 || c == 13; };   // ESP32, C3, S3, C6
-      uint32_t mg, mg3; memcpy(&mg, h + 32, 4); memcpy(&mg3, h3 + 32, 4);
-      const uint16_t id = h[12] | (h[13] << 8), id2 = h2[12] | (h2[13] << 8);
-      if (h[0] == 0xE9 && mg == 0xABCD5432u && chipOk(id)) { addr = 0x10000; tgId = id; }                 // app file
-      else if (h[0] == 0xFF && h2[0] == 0xE9 && id2 == 0) { addr = 0; tgId = 0; }                          // merged, classic ESP32
-      else if (h[0] == 0xE9 && id != 0 && chipOk(id) && h3[0] == 0xE9 && mg3 == 0xABCD5432u) { addr = 0; tgId = id; }   // merged, S3 / C3 / C6
-      else if (h[0] == 0xE9 && !chipOk(id)) otaErr = "This file is for a chip the flasher doesn't know (it does ESP32, S3, C3 and C6).";
-      else if (h[0] == 0xE9) otaErr = "This is not the app file. Use .ino.bin (or .merged.bin for a blank board).";
-      else otaErr = "This is not an ESP32 firmware file.";
-    }
-    if (otaErr.length()) { FFat.remove("/target.tmp"); return; }
-    FFat.remove("/target.bin");
-    if (!FFat.rename("/target.tmp", "/target.bin")) { otaErr = "Can't save the file on the pad"; return; }
-    prefs.putUInt("tgsize", otaBytes); prefs.putUInt("tgaddr", addr); prefs.putUShort("tgchip", tgId);
-    prefs.putString("tgname", u.filename); prefs.putString("tgmsg", "");
+    if (!otaErr.length() && otaBytes < 20000) otaErr = "The file is too small to be a sketch";
+    if (otaErr.length()) { FFat.remove("/ctl.tmp"); return; }
+    char path[16]; snprintf(path, sizeof path, "/ctl%d.bin", ctlUpIdx);
+    FFat.remove(path);
+    if (!FFat.rename("/ctl.tmp", path)) { otaErr = "Can't save the file on the pad"; return; }
+    prefs.putUInt(ctlKey("cs", ctlUpIdx).c_str(), otaBytes); prefs.putUInt(ctlKey("cc", ctlUpIdx).c_str(), otaCrcAcc);
+    prefs.putUChar(ctlKey("cp", ctlUpIdx).c_str(), 1); prefs.putString(ctlKey("cm", ctlUpIdx).c_str(), "");
+    Serial.printf("Controller %d update saved: %lu bytes\n", ctlUpIdx, (unsigned long)otaBytes);
   }
 }
 
@@ -4808,6 +4942,7 @@ static void startConfigPortal() {
   IPAddress ip = WiFi.softAPIP();
   dns.start(53, "*", ip);                       // captive portal: all names -> us
   ffatOk = FFat.begin(true);                    // keeps the stick file (formatted the first time, takes a few s)
+  if (ffatOk) { FFat.remove("/target.bin"); FFat.remove("/target.tmp"); }   // old wired-flasher file, not used any more
   if (!ffatOk) Serial.println("FATFS not found: stick updates need the 16M Flash (3MB APP/9.9MB FATFS) scheme");
   Serial.printf("Config AP '%s' up at http://%s\n", AP_SSID, ip.toString().c_str());
   showStatus("CONFIG", "192.168.4.1");
@@ -4891,48 +5026,43 @@ static void startConfigPortal() {
     if (otaErr.length()) { server.send(400, "text/plain", otaErr); return; }
     server.send(200, "text/plain", "OK");
   }, otaStickUpload);
-  server.on("/api/flash", HTTP_GET, []() {
-    JsonDocument d;
-    const bool has = ffatOk && FFat.exists("/target.bin") && prefs.getUInt("tgsize", 0);
-    d["file"] = has ? prefs.getString("tgname", "board.bin") : String("");
-    d["size"] = prefs.getUInt("tgsize", 0);
-    d["addr"] = prefs.getUInt("tgaddr", 0x10000);
-    d["msg"] = prefs.getString("tgmsg", "");
-    const uint16_t c = prefs.getUShort("tgchip", 0);
-    d["chip"] = c == 9 ? "ESP32-S3" : c == 5 ? "ESP32-C3" : c == 13 ? "ESP32-C6" : "ESP32";
-    d["mode"] = prefs.getUChar("flmode", 0);
-    d["tx"] = prefs.getChar("fltx", 17); d["rx"] = prefs.getChar("flrx", 18);
-    d["en"] = prefs.getChar("flen", 16); d["boot"] = prefs.getChar("flboot", 15);
+  server.on("/api/ctls", HTTP_GET, []() {
+    JsonDocument d; JsonArray a = d.to<JsonArray>();
+    for (int i = 0; i < MAX_CTL; i++) {
+      if (!ctlUsed(i)) continue;
+      JsonObject o = a.add<JsonObject>();
+      char mac[18]; const uint8_t* m = ctls[i].mac;
+      snprintf(mac, sizeof mac, "%02X:%02X:%02X:%02X:%02X:%02X", m[0], m[1], m[2], m[3], m[4], m[5]);
+      char path[16]; snprintf(path, sizeof path, "/ctl%d.bin", i);
+      o["i"] = i; o["name"] = ctls[i].name; o["ver"] = ctls[i].ver; o["chip"] = ctlChipName(ctls[i].chip); o["mac"] = mac;
+      o["pend"] = (ffatOk && prefs.getUChar(ctlKey("cp", i).c_str(), 0) && FFat.exists(path)) ? 1 : 0;
+      o["size"] = prefs.getUInt(ctlKey("cs", i).c_str(), 0);
+      o["msg"] = prefs.getString(ctlKey("cm", i).c_str(), "");
+    }
     String o; serializeJson(d, o);
     server.send(200, "application/json", o);
   });
-  server.on("/api/flash/file", HTTP_POST, []() {
+  server.on("/api/ctl/file", HTTP_POST, []() {
     if (otaErr.length()) { server.send(400, "text/plain", otaErr); return; }
     server.send(200, "text/plain", "OK");
-  }, tgUpload);
-  server.on("/api/flash/start", HTTP_POST, []() {
-    if (!ffatOk || !FFat.exists("/target.bin")) { server.send(400, "text/plain", "Save a file first"); return; }
-    JsonDocument q;
-    if (server.hasArg("plain") && !deserializeJson(q, server.arg("plain"))) {
-      const int mode = q["mode"] | 0;
-      if (mode == 1) {                                     // 4 wires: check the pins
-        const int p[4] = {q["tx"] | -1, q["rx"] | -1, q["en"] | -1, q["boot"] | -1};
-        static const char* const nm[4] = {"TX", "RX", "EN", "BOOT"};
-        for (int i = 0; i < 4; i++) {
-          if (!pinAllowed(p[i])) { server.send(400, "text/plain", String(nm[i]) + ": GPIO " + p[i] + " can't be used"); return; }
-          for (int j = 0; j < i; j++) if (p[j] == p[i]) { server.send(400, "text/plain", "The 4 pins must be different"); return; }
-        }
-        prefs.putChar("fltx", p[0]); prefs.putChar("flrx", p[1]); prefs.putChar("flen", p[2]); prefs.putChar("flboot", p[3]);
-      }
-      prefs.putUChar("flmode", mode == 1 ? 1 : 0);
+  }, ctlUpload);
+  server.on("/api/ctl/cancel", HTTP_POST, []() {
+    const int i = server.arg("i").toInt();
+    if (i >= 0 && i < MAX_CTL) {
+      char path[16]; snprintf(path, sizeof path, "/ctl%d.bin", i);
+      if (ffatOk) FFat.remove(path);
+      prefs.putUChar(ctlKey("cp", i).c_str(), 0); prefs.putString(ctlKey("cm", i).c_str(), "cancelled");
     }
-    prefs.putBool("flashmode", true);
     server.send(200, "text/plain", "OK");
-    restartInto(false);
   });
-  server.on("/api/flash/delete", HTTP_POST, []() {
-    if (ffatOk) FFat.remove("/target.bin");
-    prefs.putUInt("tgsize", 0); prefs.putString("tgmsg", "");
+  server.on("/api/ctl/forget", HTTP_POST, []() {
+    const int i = server.arg("i").toInt();
+    if (i >= 0 && i < MAX_CTL) {
+      char path[16]; snprintf(path, sizeof path, "/ctl%d.bin", i);
+      if (ffatOk) FFat.remove(path);
+      prefs.putUChar(ctlKey("cp", i).c_str(), 0); prefs.putString(ctlKey("cm", i).c_str(), "");
+      memset(&ctls[i], 0, sizeof ctls[i]); prefs.putBytes("ctls", ctls, sizeof ctls);
+    }
     server.send(200, "text/plain", "OK");
   });
   server.on("/api/ota/stickcancel", HTTP_POST, []() {
@@ -5065,7 +5195,7 @@ static void sleepNow(bool forever) {
   uint32_t t0 = millis();
   while (!sleepAck && millis() - t0 < 500) delay(5);
 
-  if (needRemote) esp_now_deinit();
+  if (radioOn) esp_now_deinit();
   WiFi.mode(WIFI_OFF);
 
   ledPowerOffForSleep();                         // data lines low, then strip + matrix power off
@@ -5114,430 +5244,6 @@ static void batteryTick() {                        // once a second, from loop()
   } else critSince = 0;
 }
 
-// ============================ USB flasher (classic ESP32 boards on the S3's own USB port) ============================
-// The S3's USB port works as a USB host. It talks to the board's USB-serial chip, puts the ESP32 in download mode
-// with DTR / RTS (like the Arduino IDE does), and writes the file with the ESP32's built-in (ROM) loader:
-// sync -> faster speed -> attach flash -> erase -> 1 KB blocks -> MD5 check -> reset.
-static usb_host_client_handle_t uhClient = nullptr;
-static usb_device_handle_t uhDev = nullptr;
-static volatile uint8_t uhNewAddr = 0;
-static volatile bool uhGone = false, uhInRun = false;
-static SemaphoreHandle_t uhCtrlSem = nullptr, uhOutSem = nullptr;
-static StreamBufferHandle_t uhRx = nullptr;
-static usb_transfer_t *uhCtrlX = nullptr, *uhOutX = nullptr, *uhInX = nullptr;
-static uint8_t  uhKind = 0;                               // 1 CP210x, 2 CH34x, 3 CDC-ACM (CH9102 / CH343 / the chip's own USB)
-static bool     uhJtag = false;                           // the board's own USB port (ESP32-S3 / C3 / C6 USB-Serial-JTAG)
-static uint16_t tgChip = 0;                               // chip of the file: 0 ESP32, 9 S3, 5 C3, 13 C6
-static uint8_t  uhIfData = 0, uhIfComm = 0, uhEpIn = 0, uhEpOut = 0;
-static uint16_t uhMpsIn = 64;
-static bool     flUart = false;                           // 4-wire mode: Serial1 + EN / BOOT pins
-static int8_t   flEn = -1, flBoot = -1;
-
-static void uhClientCb(const usb_host_client_event_msg_t* m, void*) {
-  if (m->event == USB_HOST_CLIENT_EVENT_NEW_DEV) uhNewAddr = m->new_dev.address;
-  else if (m->event == USB_HOST_CLIENT_EVENT_DEV_GONE) uhGone = true;
-}
-static void uhLibTask(void*) { for (;;) { uint32_t fl = 0; usb_host_lib_handle_events(portMAX_DELAY, &fl); } }
-static void uhClientTask(void*) { for (;;) usb_host_client_handle_events(uhClient, portMAX_DELAY); }
-static void uhDoneCb(usb_transfer_t* t) { xSemaphoreGive((SemaphoreHandle_t)t->context); }
-static void uhInCb(usb_transfer_t* t) {                   // bytes from the board -> stream buffer, then ask again
-  if (t->status == USB_TRANSFER_STATUS_COMPLETED && t->actual_num_bytes)
-    xStreamBufferSend(uhRx, t->data_buffer, t->actual_num_bytes, 0);
-  if (uhInRun && !uhGone && t->status != USB_TRANSFER_STATUS_NO_DEVICE && t->status != USB_TRANSFER_STATUS_CANCELED)
-    usb_host_transfer_submit(t);
-}
-static bool uhCtrl(uint8_t type, uint8_t req, uint16_t val, uint16_t idx, const uint8_t* data, uint16_t len) {
-  usb_setup_packet_t* s = (usb_setup_packet_t*)uhCtrlX->data_buffer;
-  s->bmRequestType = type; s->bRequest = req; s->wValue = val; s->wIndex = idx; s->wLength = len;
-  if (len) memcpy(uhCtrlX->data_buffer + sizeof(usb_setup_packet_t), data, len);
-  uhCtrlX->num_bytes = sizeof(usb_setup_packet_t) + len;
-  uhCtrlX->device_handle = uhDev; uhCtrlX->bEndpointAddress = 0;
-  uhCtrlX->callback = uhDoneCb; uhCtrlX->context = uhCtrlSem; uhCtrlX->timeout_ms = 1000;
-  xSemaphoreTake(uhCtrlSem, 0);
-  if (usb_host_transfer_submit_control(uhClient, uhCtrlX) != ESP_OK) return false;
-  if (xSemaphoreTake(uhCtrlSem, pdMS_TO_TICKS(1500)) != pdTRUE) return false;
-  return uhCtrlX->status == USB_TRANSFER_STATUS_COMPLETED;
-}
-static bool uhWrite(const uint8_t* d, size_t n) {
-  if (flUart) { Serial1.write(d, n); Serial1.flush(); return true; }
-  if (n > uhOutX->data_buffer_size) return false;
-  memcpy(uhOutX->data_buffer, d, n);
-  uhOutX->num_bytes = n; uhOutX->device_handle = uhDev; uhOutX->bEndpointAddress = uhEpOut;
-  uhOutX->callback = uhDoneCb; uhOutX->context = uhOutSem; uhOutX->timeout_ms = 2000;
-  xSemaphoreTake(uhOutSem, 0);
-  if (usb_host_transfer_submit(uhOutX) != ESP_OK) return false;
-  if (xSemaphoreTake(uhOutSem, pdMS_TO_TICKS(3000)) != pdTRUE) return false;
-  return uhOutX->status == USB_TRANSFER_STATUS_COMPLETED;
-}
-// CH340 / CH341 speed setting (same maths as the Linux ch341 driver)
-static int ch34xDivisor(uint32_t speed) {
-  const uint32_t CLK = 48000000;
-  int ps;
-  for (ps = 3; ps >= 0; ps--) if (speed > CLK / ((1u << (12 - 3 * ps - 1)) * 512)) break;
-  if (ps < 0) return -1;
-  uint32_t cd = 1u << (12 - 3 * ps - 1), div = CLK / (cd * speed), fact;
-  if (div < 9 || div > 255) { div /= 2; cd *= 2; fact = 0; } else fact = 1;
-  if (div < 2) return -1;
-  if (16 * CLK / (cd * div) - 16 * speed >= 16 * speed - 16 * CLK / (cd * (div + 1))) div++;
-  if (fact == 1 && div % 2 == 0) { div /= 2; fact = 0; }
-  return (int)(((0x100 - div) << 8) | (fact << 2) | (uint32_t)ps);
-}
-static bool uhSetBaud(uint32_t baud) {
-  if (flUart) { Serial1.updateBaudRate(baud); return true; }
-  if (uhKind == 1) { uint8_t b[4]; memcpy(b, &baud, 4); return uhCtrl(0x41, 0x1E, 0, uhIfData, b, 4); }
-  if (uhKind == 2) {
-    const int d = ch34xDivisor(baud);
-    return d >= 0 && uhCtrl(0x40, 0x9A, 0x1312, (uint16_t)(d | 0x80), nullptr, 0) && uhCtrl(0x40, 0x9A, 0x2518, 0x00C3, nullptr, 0);
-  }
-  uint8_t lc[7]; memcpy(lc, &baud, 4); lc[4] = 0; lc[5] = 0; lc[6] = 8;   // 8N1
-  return uhCtrl(0x21, 0x20, 0, uhIfComm, lc, 7);
-}
-static bool uhLines(bool dtr, bool rts) {                 // true = line active (like "DTR on" in a serial program)
-  if (flUart) {                                           // 4 wires: RTS = hold EN (reset) low, DTR = hold BOOT low
-    if (rts) { pinMode(flEn, OUTPUT); digitalWrite(flEn, LOW); } else pinMode(flEn, INPUT);      // released: the board's own pull-up
-    if (dtr) { pinMode(flBoot, OUTPUT); digitalWrite(flBoot, LOW); } else pinMode(flBoot, INPUT);
-    return true;
-  }
-  if (uhKind == 1) return uhCtrl(0x41, 0x07, (dtr ? 1 : 0) | (rts ? 2 : 0) | 0x0300, uhIfData, nullptr, 0);
-  if (uhKind == 2) return uhCtrl(0x40, 0xA4, (uint16_t)(~((dtr ? 0x20 : 0) | (rts ? 0x40 : 0)) & 0xFF), 0, nullptr, 0);
-  return uhCtrl(0x21, 0x22, (dtr ? 1 : 0) | (rts ? 2 : 0), uhIfComm, nullptr, 0);
-}
-static void uhDrain() {
-  if (flUart) { while (Serial1.available()) Serial1.read(); return; }
-  uint8_t junk[64]; while (xStreamBufferReceive(uhRx, junk, sizeof junk, 0) > 0) {}
-}
-
-// opens the board and finds its serial interface; err says why not
-static bool uhOpen(uint8_t addr, String& err) {
-  if (usb_host_device_open(uhClient, addr, &uhDev) != ESP_OK) { err = "USB: can't open"; return false; }
-  const usb_device_desc_t* dd = nullptr; const usb_config_desc_t* cd = nullptr;
-  if (usb_host_get_device_descriptor(uhDev, &dd) != ESP_OK || usb_host_get_active_config_descriptor(uhDev, &cd) != ESP_OK) { err = "USB: no descriptor"; return false; }
-  const uint16_t vid = dd->idVendor, pid = dd->idProduct;
-  uhJtag = vid == 0x303A;
-  const uint8_t* p = (const uint8_t*)cd;
-  const uint16_t total = cd->wTotalLength;
-  int8_t ifNum[8]; uint8_t ifCls[8], eIn[8], eOut[8]; uint16_t mps[8]; int ni = -1;
-  bool alt0 = true;
-  for (uint16_t i = 0; i + 2 <= total && p[i] >= 2; i += p[i]) {
-    if (p[i + 1] == 4 && p[i] >= 9) {                     // interface
-      alt0 = p[i + 3] == 0;
-      if (alt0 && ni < 7) { ni++; ifNum[ni] = p[i + 2]; ifCls[ni] = p[i + 5]; eIn[ni] = 0; eOut[ni] = 0; mps[ni] = 64; }
-    } else if (p[i + 1] == 5 && p[i] >= 7 && ni >= 0 && alt0 && (p[i + 3] & 3) == 2) {   // bulk endpoint
-      if (p[i + 2] & 0x80) { eIn[ni] = p[i + 2]; mps[ni] = p[i + 4] | (p[i + 5] << 8); } else eOut[ni] = p[i + 2];
-    }
-  }
-  int use = -1;
-  for (int k = 0; k <= ni; k++) if (ifCls[k] == 0x0A && eIn[k] && eOut[k]) { use = k; uhKind = 3; }   // standard CDC (CH9102 / CH343)
-  if (use < 0) for (int k = 0; k <= ni; k++) if (eIn[k] && eOut[k]) { use = k; break; }
-  if (use >= 0 && uhKind != 3) {
-    if (vid == 0x10C4) uhKind = 1;
-    else if (vid == 0x1A86) uhKind = 2;
-    else use = -1;
-  }
-  if (use < 0) {
-    char b[48];
-    snprintf(b, sizeof b, vid == 0x0403 ? "FTDI chip not supported" : "unknown USB chip %04X:%04X", vid, pid);
-    err = b; return false;
-  }
-  uhIfData = ifNum[use]; uhEpIn = eIn[use]; uhEpOut = eOut[use]; uhMpsIn = mps[use] ? mps[use] : 64;
-  uhIfComm = uhIfData ? uhIfData - 1 : 0;
-  for (int k = 0; k <= ni; k++) if (ifCls[k] == 0x02) uhIfComm = ifNum[k];
-  if (usb_host_interface_claim(uhClient, uhDev, uhIfData, 0) != ESP_OK) { err = "USB: interface busy"; return false; }
-  if (usb_host_transfer_alloc(64 + sizeof(usb_setup_packet_t), 0, &uhCtrlX) != ESP_OK ||
-      usb_host_transfer_alloc(2 * (0x400 + 32) + 8, 0, &uhOutX) != ESP_OK ||
-      usb_host_transfer_alloc(uhMpsIn * 8, 0, &uhInX) != ESP_OK) { err = "USB: out of memory"; return false; }
-  if (uhKind == 1) { uhCtrl(0x41, 0x00, 0x0001, uhIfData, nullptr, 0); uhCtrl(0x41, 0x03, 0x0800, uhIfData, nullptr, 0); }   // enable, 8N1
-  if (uhKind == 2) uhCtrl(0x40, 0xA1, 0, 0, nullptr, 0);                                                                       // serial init
-  if (!uhSetBaud(115200)) { err = "USB: can't set the speed"; return false; }
-  uhLines(false, false);
-  uhInX->device_handle = uhDev; uhInX->bEndpointAddress = uhEpIn; uhInX->callback = uhInCb; uhInX->context = nullptr;
-  uhInX->num_bytes = uhMpsIn * 8; uhInX->timeout_ms = 0;
-  uhInRun = true;
-  if (usb_host_transfer_submit(uhInX) != ESP_OK) { err = "USB: can't read"; return false; }
-  return true;
-}
-
-// ---- ESP32 ROM loader (SLIP frames)
-static uint8_t flBlock[16 + 0x400], slipBuf[2 * (0x400 + 32) + 8], romResp[128];
-static bool romSend(uint8_t op, const uint8_t* data, uint16_t len, uint32_t chk) {
-  size_t o = 0;
-  slipBuf[o++] = 0xC0;
-  const uint8_t hdr[8] = {0x00, op, (uint8_t)len, (uint8_t)(len >> 8), (uint8_t)chk, (uint8_t)(chk >> 8), (uint8_t)(chk >> 16), (uint8_t)(chk >> 24)};
-  for (uint16_t i = 0; i < 8 + len; i++) {
-    const uint8_t b = i < 8 ? hdr[i] : data[i - 8];
-    if (b == 0xC0)      { slipBuf[o++] = 0xDB; slipBuf[o++] = 0xDC; }
-    else if (b == 0xDB) { slipBuf[o++] = 0xDB; slipBuf[o++] = 0xDD; }
-    else slipBuf[o++] = b;
-  }
-  slipBuf[o++] = 0xC0;
-  return uhWrite(slipBuf, o);
-}
-static int romFrame(uint32_t timeoutMs) {                 // one answer frame into romResp, or -1
-  const uint32_t t0 = millis(); bool in = false, esc = false; int n = 0; uint8_t b;
-  while (millis() - t0 < timeoutMs) {
-    if (flUart) { if (!Serial1.available()) { delay(1); continue; } b = (uint8_t)Serial1.read(); }
-    else if (xStreamBufferReceive(uhRx, &b, 1, pdMS_TO_TICKS(5)) != 1) { if (uhGone) return -1; continue; }
-    if (!in) { if (b == 0xC0) { in = true; n = 0; } continue; }
-    if (b == 0xC0) { if (n == 0) continue; return n; }
-    if (esc) { esc = false; b = b == 0xDC ? 0xC0 : b == 0xDD ? 0xDB : b; }
-    else if (b == 0xDB) { esc = true; continue; }
-    if (n < (int)sizeof romResp) romResp[n++] = b;
-  }
-  return -1;
-}
-static bool romCmd(uint8_t op, const uint8_t* data, uint16_t len, uint32_t chk, uint32_t timeoutMs, int* rlen) {
-  if (!romSend(op, data, len, chk)) return false;
-  const uint32_t t0 = millis();
-  while (millis() - t0 < timeoutMs) {
-    const int n = romFrame(timeoutMs - (millis() - t0));
-    if (n < 0) return false;
-    if (n < 8 || romResp[0] != 0x01 || romResp[1] != op) continue;   // not the answer to this command
-    const int sz = romResp[2] | (romResp[3] << 8);
-    if (sz < 2 || 8 + sz > n) continue;
-    if (rlen) *rlen = sz;
-    return romResp[8 + sz - (sz >= 4 ? 4 : 2)] == 0;                 // ESP32 ROM: 4 status bytes, first = 0 means OK
-  }
-  return false;
-}
-static bool romSync() {
-  uint8_t d[36] = {0x07, 0x07, 0x12, 0x20};
-  memset(d + 4, 0x55, 32);
-  for (uint8_t i = 0; i < 7; i++) {
-    if (romCmd(0x08, d, sizeof d, 0, 120, nullptr)) {
-      while (romFrame(80) >= 0) {}                        // the ROM answers a sync several times
-      return true;
-    }
-  }
-  return false;
-}
-static bool romEnter() {                                  // reset into download mode (same pulses as the Arduino IDE)
-  for (uint8_t attempt = 0; attempt < 6; attempt++) {
-    if (uhJtag) {                                         // the chip's own USB port: its USB block does the reset
-      uhLines(false, false); delay(100);
-      uhLines(true, false);  delay(100);                  // boot pin low
-      uhLines(true, true);   uhLines(false, true); delay(100);   // reset (through 1,1 like esptool)
-      uhLines(false, false); delay(attempt & 1 ? 500 : 200);
-    } else {
-      uhLines(false, true);  delay(100);                  // EN low = reset
-      uhLines(true, false);  delay((attempt & 1) ? 400 : 50);   // IO0 low while EN goes high = download mode
-      uhLines(false, false); delay(50);
-    }
-    uhDrain();
-    if (romSync()) return true;
-    if (uhGone) return false;
-  }
-  return false;
-}
-
-#if USE_OLED
-static void flShow(const char* l1, const char* l2, int pct) {
-  oled.setPowerSave(0);
-  oled.clearBuffer();
-  oled.setFontMode(1); oled.setDrawColor(1);
-  oled.setFont(u8g2_font_5x8_tr);
-  oled.drawBox(0, 0, 64, 9);
-  oled.setDrawColor(0); oled.drawStr((64 - oled.getStrWidth("USB FLASHER")) / 2, 8, "USB FLASHER"); oled.setDrawColor(1);
-  oled.drawStr((64 - oled.getStrWidth(l1)) / 2, 21, l1);
-  oled.setFont(u8g2_font_4x6_tr);
-  char a[17], b[17]; strlcpy(a, l2, sizeof a); strlcpy(b, strlen(l2) > 16 ? l2 + 16 : "", sizeof b);
-  oled.drawStr((64 - oled.getStrWidth(a)) / 2, 31, a);
-  if (pct < 0 && b[0]) oled.drawStr((64 - oled.getStrWidth(b)) / 2, 39, b);
-  if (pct >= 0) { oled.drawFrame(2, 37, 60, 8); oled.drawBox(4, 39, 56 * constrain(pct, 0, 100) / 100, 4); }
-  oled.sendBuffer();
-}
-#else
-static void flShow(const char*, const char*, int) {}
-#endif
-
-static void flDone(bool ok, const String& msg) {
-  prefs.putString("tgmsg", String(ok ? "done: " : "failed: ") + msg);
-  flShow(ok ? "DONE" : "FAILED", msg.c_str(), -1);
-  const uint32_t t0 = millis();
-  while (millis() - t0 < 10000 && digitalRead(PIN_MODE_BTN) == HIGH) delay(20);   // 10 s, or the mode button
-  while (digitalRead(PIN_MODE_BTN) == LOW) delay(10);
-  ESP.restart();
-  for (;;) {}
-}
-
-// writes the saved file to the board; returns "" when it worked
-// which chip answered: 0 ESP32, 2 S2, 5 C3, 9 S3, 13 C6 ... (-1 = unknown)
-static int romChip() {
-  int rl = 0;
-  if (romCmd(0x14, nullptr, 0, 0, 1000, &rl) && rl >= 20) {          // newer chips: security info carries the chip id
-    uint32_t id; memcpy(&id, romResp + 8 + 12, 4); return (int)id;
-  }
-  const uint32_t a = 0x40001000;                                      // older chips: magic value in ROM
-  if (romCmd(0x0A, (const uint8_t*)&a, 4, 0, 1000, nullptr)) {
-    uint32_t v; memcpy(&v, romResp + 4, 4);
-    if (v == 0x00F01D83u) return 0;
-    if (v == 0x000007C6u) return 2;
-    if (v == 0x00000009u) return 9;
-    if (v == 0x6921506Fu || v == 0x1B31506Fu || v == 0x4881606Fu || v == 0x4361606Fu) return 5;
-    if (v == 0x2CE0806Fu) return 13;
-  }
-  return -1;
-}
-static const char* chipName(int c) {
-  return c == 0 ? "ESP32" : c == 2 ? "ESP32-S2" : c == 5 ? "ESP32-C3" : c == 9 ? "ESP32-S3" : c == 13 ? "ESP32-C6" : "unknown chip";
-}
-
-static String romFlashFile(File& f, uint32_t size, uint32_t addr) {
-  uint32_t p[6] = {0, 0, 0, 0, 0, 0};
-  uint32_t nb[2] = {460800, 0};
-  if (romCmd(0x0F, (uint8_t*)nb, 8, 0, 3000, nullptr)) {   // faster: 460800 baud (stays at 115200 if refused)
-    uhSetBaud(460800); delay(50); uhDrain();
-  }
-  if (!romCmd(0x0D, (uint8_t*)p, 8, 0, 3000, nullptr)) return "flash not found";   // SPI attach
-  p[0] = 0; p[1] = 4UL * 1024 * 1024; p[2] = 64 * 1024; p[3] = 4096; p[4] = 256; p[5] = 0xFFFF;
-  if (!romCmd(0x0B, (uint8_t*)p, 24, 0, 3000, nullptr)) return "flash setup failed";
-  const uint32_t BS = 0x400, blocks = (size + BS - 1) / BS;
-  p[0] = size; p[1] = blocks; p[2] = BS; p[3] = addr; p[4] = 0;   // newer chips: 5th word = not encrypted
-  flShow("ERASING", "takes a few seconds", 0);
-  if (!romCmd(0x02, (uint8_t*)p, tgChip == 0 ? 16 : 20, 0, 20000 + size / 1024 * 40, nullptr)) return "erase failed";
-  for (uint32_t seq = 0; seq < blocks; seq++) {
-    const uint32_t off = seq * BS, n = min(BS, size - off);
-    const uint32_t hdr[4] = {BS, seq, 0, 0};
-    memcpy(flBlock, hdr, 16);
-    if (!f.seek(off) || f.read(flBlock + 16, n) != n) return "can't read the file";
-    if (n < BS) memset(flBlock + 16 + n, 0xFF, BS - n);
-    uint32_t ck = 0xEF;
-    for (uint32_t i = 0; i < BS; i++) ck ^= flBlock[16 + i];
-    if (!romCmd(0x03, flBlock, 16 + BS, ck, 5000, nullptr)) return uhGone ? "board unplugged" : "write failed";
-    if ((seq & 7) == 0 || seq + 1 == blocks) {
-      char b[24]; snprintf(b, sizeof b, "%lu / %lu KB", (unsigned long)((off + n) / 1024), (unsigned long)(size / 1024));
-      flShow("WRITING", b, (int)((uint64_t)(seq + 1) * 100 / blocks));
-    }
-  }
-  flShow("CHECKING", "MD5 of what was written", 100);
-  const uint32_t m[4] = {addr, size, 0, 0};
-  int rl = 0;
-  if (!romCmd(0x13, (const uint8_t*)m, 16, 0, 10000 + size / 1024 * 10, &rl) || rl < 36) return "check failed";
-  char theirs[33]; memcpy(theirs, romResp + 8, 32); theirs[32] = 0;
-  MD5Builder md; md.begin();
-  for (uint32_t off = 0; off < size; off += BS) {
-    const uint32_t n = min(BS, size - off);
-    if (!f.seek(off) || f.read(flBlock, n) != n) return "can't read the file";
-    md.add(flBlock, n);
-  }
-  md.calculate();
-  if (strcasecmp(md.toString().c_str(), theirs) != 0) return "check failed (MD5)";
-  uhLines(false, true); delay(200); uhLines(false, false);   // reset: the board starts its new code
-  return "";
-}
-
-// Line check: a powered USB board pulls its D+ wire high (1.5k), the pad's pins pull down weakly. GPIO20 = D+, GPIO19 = D-.
-// Seen high -> the pad restarts into the flasher with the USB host (the pins can't go back to USB without a restart).
-static void usbLineCheck() {
-  CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_USB_PAD_ENABLE);   // pins 19 / 20 as plain inputs
-  pinMode(19, INPUT_PULLDOWN); pinMode(20, INPUT_PULLDOWN);
-  const uint32_t t0 = millis(); uint32_t highSince = 0;
-  while (millis() - t0 < 45000) {
-    const int dp = digitalRead(20), dm = digitalRead(19);
-    char b[40]; snprintf(b, sizeof b, "D+ GPIO20: %d    D- GPIO19: %d", dp, dm);
-    flShow("LINE CHECK", b, -1);
-    if (dp || dm) {
-      if (!highSince) highSince = millis();
-      if (millis() - highSince > 800) {
-        if (dm && !dp) flDone(false, "D- is high: swap the green and white wires");
-        flShow("SIGNAL OK", "wires are good, starting USB", -1);
-        prefs.putBool("flashmode", true); prefs.putBool("flskip", true);
-        delay(1500);
-        ESP.restart();
-      }
-    } else highSince = 0;
-    if (digitalRead(PIN_MODE_BTN) == LOW) flDone(false, "stopped");
-    delay(100);
-  }
-  flDone(false, "no signal on GPIO19 / 20: check the wires and that the board has power");
-}
-
-// the whole flasher mode (started from the setup page). Never returns: the pad restarts at the end.
-static void runUsbFlasher() {
-  FastLED.clear(true);
-  const uint32_t size = prefs.getUInt("tgsize", 0), addr = prefs.getUInt("tgaddr", 0x10000);
-  tgChip = prefs.getUShort("tgchip", 0);
-  ffatOk = FFat.begin(false);
-  File f;
-  if (ffatOk) f = FFat.open("/target.bin", FILE_READ);
-  if (!f || !size || f.size() != size) flDone(false, "no file saved");
-#if defined(ARDUINO_USB_MODE) && ARDUINO_USB_MODE == 0
-  flDone(false, "set Tools > USB Mode to Hardware CDC");
-#endif
-  String err;
-  if (prefs.getUChar("flmode", 0) == 1) {                // 4 wires: TX, RX, EN, BOOT
-    const int tx = prefs.getChar("fltx", -1), rx = prefs.getChar("flrx", -1);
-    flEn = prefs.getChar("flen", -1); flBoot = prefs.getChar("flboot", -1);
-    if (tx < 0 || rx < 0 || flEn < 0 || flBoot < 0) flDone(false, "set the 4 pins in the setup page");
-    flUart = true;
-    pinMode(flEn, INPUT); pinMode(flBoot, INPUT);
-    Serial1.setRxBufferSize(4096);
-    Serial1.begin(115200, SERIAL_8N1, rx, tx);
-    char b[32]; snprintf(b, sizeof b, "TX%d RX%d EN%d BOOT%d", tx, rx, (int)flEn, (int)flBoot);
-    flShow("CONNECTING", b, -1);
-  } else {
-    if (prefs.getBool("flskip", false)) prefs.putBool("flskip", false);   // line check already passed
-    else usbLineCheck();                                                  // restarts by itself when it sees the board
-    flShow("STARTING", "", -1);
-    Serial.println("USB flasher: the USB port becomes a host now (serial output stops)");
-    Serial.flush(); Serial.end();
-    uhCtrlSem = xSemaphoreCreateBinary(); uhOutSem = xSemaphoreCreateBinary();
-    uhRx = xStreamBufferCreate(4096, 1);
-    usb_host_config_t hc = {};
-    hc.skip_phy_setup = false; hc.intr_flags = ESP_INTR_FLAG_LEVEL1;
-    if (usb_host_install(&hc) != ESP_OK) flDone(false, "USB host won't start");
-    xTaskCreatePinnedToCore(uhLibTask, "usblib", 4096, nullptr, 3, nullptr, 0);
-    usb_host_client_config_t cc = {};
-    cc.is_synchronous = false; cc.max_num_event_msg = 5;
-    cc.async.client_event_callback = uhClientCb; cc.async.callback_arg = nullptr;
-    if (usb_host_client_register(&cc, &uhClient) != ESP_OK) flDone(false, "USB host won't start");
-    xTaskCreatePinnedToCore(uhClientTask, "usbcli", 4096, nullptr, 3, nullptr, 0);
-
-    flShow("PLUG IN BOARD", "USB port; mode button = stop", -1);
-    const uint32_t t0 = millis();
-    uint32_t lastLook = 0;
-    while (!uhNewAddr) {
-      if (millis() - lastLook >= 500) {                      // also find a board that was already plugged in
-        lastLook = millis();
-        uint8_t list[4]; int n = 0;
-        if (usb_host_device_addr_list_fill(sizeof list, list, &n) == ESP_OK && n > 0) { uhNewAddr = list[0]; break; }
-        usb_host_lib_info_t li = {};
-        usb_host_lib_info(&li);
-        char b[40];
-        snprintf(b, sizeof b, "host on, %d dev, %lus left", li.num_devices, (unsigned long)((120000 - (millis() - t0)) / 1000));
-        flShow("PLUG IN BOARD", b, -1);
-      }
-      if (digitalRead(PIN_MODE_BTN) == LOW) flDone(false, "stopped");
-      if (millis() - t0 > 120000) flDone(false, "no board plugged in (2 min)");
-      delay(20);
-    }
-    delay(300);
-    if (!uhOpen(uhNewAddr, err)) flDone(false, err);
-    {
-      const usb_device_desc_t* dd = nullptr;
-      if (usb_host_get_device_descriptor(uhDev, &dd) == ESP_OK && dd) {
-        char b[32]; snprintf(b, sizeof b, "USB ID %04X:%04X", dd->idVendor, dd->idProduct);
-        flShow("FOUND A BOARD", b, -1); delay(1200);
-      }
-    }
-    flShow("CONNECTING", uhJtag ? "board's own USB" : uhKind == 1 ? "CP210x chip" : uhKind == 2 ? "CH340 chip" : "CH9102 / CDC chip", -1);
-  }
-  if (!romEnter()) flDone(false, "no answer: hold BOOT on the board, try again");
-  {
-    const int chip = romChip();
-    if (chip != (int)tgChip) {                             // wrong board for this file: write nothing
-      uhLines(false, true); delay(200); uhLines(false, false);   // let it start its own code again
-      f.close();
-      flDone(false, String("board is ") + chipName(chip) + ", file is for " + chipName(tgChip));
-    }
-    flShow("CONNECTED", chipName(chip), -1);
-    delay(800);
-  }
-  err = romFlashFile(f, size, addr);
-  f.close();
-  if (err.length()) flDone(false, err);
-  flDone(true, "the board runs its new code");
-}
-
 // ============================ setup / loop ============================
 void setup() {
   Serial.begin(115200);
@@ -5554,8 +5260,7 @@ void setup() {
 
   cfgMode = prefs.getBool("cfgmode", false);
   if (cfgMode) prefs.putBool("cfgmode", false);   // one-shot: next boot returns to Bluetooth
-  const bool flashMode = prefs.getBool("flashmode", false);   // USB flasher (started from the setup page)
-  if (flashMode) prefs.putBool("flashmode", false);
+  prefs.remove("flashmode"); prefs.remove("flskip");   // left over from the old wired flasher (v5.5-6.1)
 
   // Load config; fall back to defaults if the stored one is corrupt/invalid
   JsonDocument doc; String err;
@@ -5564,6 +5269,8 @@ void setup() {
     doc.clear(); deserializeJson(doc, DEFAULT_JSON);
   }
   applyConfig(doc);
+  radioOn = needRemote || ctlListen;
+  ctlLoad();
 
   if (fromSleep) {
     // wake pins were RTC IO during sleep -> back to normal GPIO, then ignore the press that woke us
@@ -5601,20 +5308,25 @@ void setup() {
   oled.setFlipMode(oCfg.rot ? 1 : 0);
 #endif
 
-  if (flashMode) runUsbFlasher();                 // never returns: restarts in Bluetooth mode when done
-
   if (cfgMode) {
     setenv("TZ", cCfg.tz, 1); tzset();            // show the clock in config mode too (if it was set before)
     startConfigPortal();
   } else {
-    if (needRemote) startRemoteJoy();             // Wi-Fi/ESP-NOW only when a wireless joystick is configured
+    if (radioOn) startRemoteJoy();                // Wi-Fi/ESP-NOW for the wireless stick and the other controllers
     hid = new BleHid();
     hid->begin(deviceName.c_str());               // Bluetooth starts right away
     for (uint8_t i = 0; i < ncomps; i++) comps[i]->begin();
     syncClock();                                  // time from the home Wi-Fi, in the background (only if needed)
     strlcpy(stickVer, prefs.getString("sver", "").c_str(), sizeof stickVer);
-    if (needRemote && prefs.getUChar("sbpend", 0)) {   // a stick update is waiting
+    if (radioOn) {                                // files waiting for controllers
       ffatOk = FFat.begin(false);
+      for (int i = 0; i < MAX_CTL; i++) {
+        char path[16]; snprintf(path, sizeof path, "/ctl%d.bin", i);
+        ctlPend[i] = ffatOk && ctlUsed(i) && prefs.getUChar(ctlKey("cp", i).c_str(), 0) && FFat.exists(path);
+      }
+    }
+    if (needRemote && prefs.getUChar("sbpend", 0)) {   // a stick update is waiting
+      if (!ffatOk) ffatOk = FFat.begin(false);
       sotaSize = prefs.getUInt("sbsize", 0); sotaCrc = prefs.getUInt("sbcrc", 0);
       sotaPending = ffatOk && sotaSize && FFat.exists("/stick.bin");
       if (sotaPending) Serial.printf("Stick update waiting (%lu bytes): sent when the stick is on\n", (unsigned long)sotaSize);
@@ -5639,6 +5351,7 @@ void loop() {
     for (uint8_t i = 0; i < ncomps; i++) comps[i]->update();
     fxButtonsTick();
     if (profileDirty) { profileDirty = false; prefs.putUChar("prof", profile); }   // remember iPad / PC
+    if (radioOn) { ctlTick(); ctlResult(); }                 // other controllers: list + updates by radio
     if (needRemote) {
       stickLinkTick();                                        // send the stick its settings when it needs them
       stickOtaTick();                                         // stick firmware update (when one is waiting)

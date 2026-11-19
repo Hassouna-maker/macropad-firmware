@@ -1,5 +1,6 @@
 /*
- * ESP32-S3 "hiiiii" v1.1, with updates over Wi-Fi.
+ * ESP32-S3 "hiiiii" v1.2: updates by radio from the MacroPad (PadOTA.h), and over Wi-Fi from a browser.
+ *  - From the pad: it shows up as "hiiiii" under Wireless controllers in the pad's setup page; pick the new .ino.bin there.
  *  - Hosts its own Wi-Fi called "Hiiiii" (no password). Join it: the hiiiii page opens by itself (or http://192.168.4.1).
  *  - Update: open http://192.168.4.1/update, pick the new .ino.bin (Sketch > Export Compiled Binary, board
  *    "ESP32S3 Dev Module") and tap Update. The board checks the file, installs it and restarts.
@@ -10,8 +11,9 @@
 #include <WebServer.h>
 #include <DNSServer.h>
 #include <Update.h>
+#include "PadOTA.h"
 
-constexpr const char* VERSION = "1.1";
+constexpr const char* VERSION = "1.2";
 
 WebServer server(80);
 DNSServer dns;
@@ -68,7 +70,7 @@ void onUpload() {
 void setup() {
   Serial.begin(115200);
   WiFi.mode(WIFI_AP);
-  WiFi.softAP("Hiiiii");                                  // open network, no password
+  WiFi.softAP("Hiiiii", nullptr, 1);                      // open network, channel 1 (the pad's radio channel)
   dns.start(53, "*", WiFi.softAPIP());                    // every address leads here, so the page pops up
   server.on("/update", HTTP_GET, []() { server.send(200, "text/html", UPDATE_PAGE); });
   server.on("/update", HTTP_POST, []() {
@@ -80,10 +82,12 @@ void setup() {
   server.on("/version", HTTP_GET, []() { server.send(200, "text/plain", VERSION); });
   server.onNotFound([]() { server.send(200, "text/html", PAGE); });
   server.begin();
+  padOtaBegin("hiiiii", VERSION);                         // the pad can send updates by radio
   Serial.printf("hiiiii v%s: join the Wi-Fi \"Hiiiii\", then open http://%s (update: /update)\n", VERSION, WiFi.softAPIP().toString().c_str());
 }
 
 void loop() {
   dns.processNextRequest();
   server.handleClient();
+  padOtaLoop();
 }
