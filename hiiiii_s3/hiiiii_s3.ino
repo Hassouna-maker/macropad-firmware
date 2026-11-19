@@ -16,13 +16,13 @@ constexpr const char* VERSION = "1.1";
 WebServer server(80);
 DNSServer dns;
 
-const char PAGE[] = R"(<!DOCTYPE html><html><head><meta charset=utf-8>
+const char PAGE[] = R"HTML(<!DOCTYPE html><html><head><meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1"><title>hiiiii</title></head>
 <body style="margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#111;color:#fff;font-family:system-ui,sans-serif">
 <div style="font:bold 18vw system-ui,sans-serif">hiiiii</div>
-<a href="/update" style="color:#888;font-size:14px;margin-top:20px">update</a></body></html>)";
+<a href="/update" style="color:#888;font-size:14px;margin-top:20px">update</a></body></html>)HTML";
 
-const char UPDATE_PAGE[] = R"(<!DOCTYPE html><html><head><meta charset=utf-8>
+const char UPDATE_PAGE[] = R"HTML(<!DOCTYPE html><html><head><meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1"><title>Update</title></head>
 <body style="font-family:system-ui,sans-serif;background:#111;color:#eee;padding:16px;max-width:520px;margin:auto">
 <h2>Update</h2><p id=v style="color:#888"></p>
@@ -37,7 +37,7 @@ function up(){const file=f.files[0];if(!file){alert('Choose a .bin file first.')
  x.upload.onprogress=e=>{if(e.lengthComputable)s.textContent='Uploading '+Math.round(e.loaded*100/e.total)+' %';};
  x.onload=()=>{s.textContent=x.status==200?'Updated! Restarting... join the Wi-Fi again in a few seconds.':'Not updated: '+x.responseText;};
  x.onerror=()=>{s.textContent='Upload failed (connection lost). Try again.';};x.send(fd);}
-</script></body></html>)";
+</script></body></html>)HTML";
 
 // a firmware file starts with 0xE9, has the chip id at byte 12 (9 = ESP32-S3) and its app description at byte 32
 String updErr; bool updFirst = false;
