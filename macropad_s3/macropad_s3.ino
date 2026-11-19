@@ -9,6 +9,10 @@ struct TextLine;
 /*
  * ESP32-S3 Wireless Macro Pad v5.5  (Arduino IDE / arduino-esp32 core 3.x)
  *
+ * NEW in v6.1: the flasher can also use 4 wires instead of USB: pad TX -> board RX, pad RX <- board TX, a pad pin
+ *  -> the board's EN (reset) and one -> its BOOT pin. Works with every ESP32 chip, even a brand-new one. Pick the
+ *  connection and the 4 pins in the setup page's flasher card.
+ *
  * NEW in v6.0: the USB flasher starts with a line check: it reads the USB wires (GPIO20 = D+, GPIO19 = D-) as plain
  *  pins and shows them on the OLED, so you can see if the board's signal reaches the pad before the USB host starts.
  *
@@ -431,7 +435,7 @@ static volatile bool     swMode = false;                  // the timer button wo
 static volatile uint8_t  swState = SW_IDLE;
 static volatile uint32_t swStartAt = 0, swAccum = 0;      // elapsed = swAccum (+ time since swStartAt while running)
 static uint32_t swElapsed() { return swState == SW_RUN ? swAccum + (millis() - swStartAt) : swAccum; }
-constexpr const char* FW_VERSION = "6.0";
+constexpr const char* FW_VERSION = "6.1";
 static volatile bool sotaBusy = false;                    // sending a firmware file to the stick right now
 static bool sleepAllowed() { return timerState == T_IDLE && swState == SW_IDLE && !sotaBusy; }   // never sleep with a timer / stopwatch / stick update going
 
@@ -4571,7 +4575,10 @@ function render(){
   Main board: installed at once, then the pad restarts in Bluetooth mode (your settings stay).<br>
   Stick: kept on the pad and sent over the wireless link the next time the stick is on and left still for 2 s (about a minute; its strip fills up purple, the OLED shows the progress). The stick needs code v3.0 or newer, uploaded by USB once. The stick's own Partition Scheme must have room for updates (the default one does).</small></div>
   <div class=card><h3>Flash a board on the USB port</h3><small id=flv>${flInfo()}</small>
-  <label>Board file: ESP32, ESP32-S3, C3 or C6 (.ino.bin, or .merged.bin for a blank board)<input type=file id=ftg accept=".bin"></label><button class=p onclick="upTg()">Save file</button>${FL.file?'<button class=p onclick="startFlash()">Start flashing</button><button onclick="delTg()">Delete file</button>':''}
+  <label>Board file: ESP32, ESP32-S3, C3 or C6 (.ino.bin, or .merged.bin for a blank board)<input type=file id=ftg accept=".bin"></label><button class=p onclick="upTg()">Save file</button>
+  <label>Connection<select id=flm onchange="FL.mode=Number(this.value);render()"><option value=0 ${FL.mode==1?'':'selected'}>USB port (GPIO19 / 20)</option><option value=1 ${FL.mode==1?'selected':''}>4 wires: TX, RX, EN, BOOT</option></select></label>
+  ${FL.mode==1?`<label>Pad TX pin (to the board's RX)<input id=fltx type=number value="${FL.tx??17}"></label><label>Pad RX pin (to the board's TX)<input id=flrx type=number value="${FL.rx??18}"></label><label>Pad pin to the board's EN / RST<input id=flen type=number value="${FL.en??16}"></label><label>Pad pin to the board's BOOT (GPIO0; GPIO9 on C3 / C6)<input id=flboot type=number value="${FL.boot??15}"></label><small>4 wires: pad TX &rarr; board RX (U0RXD), pad RX &larr; board TX (U0TXD), plus EN, BOOT and GND. Power the board from its 5V pin (or its own USB port), not from a port with a USB chip on the same RX / TX pins.</small>`:''}
+  ${FL.file?'<button class=p onclick="startFlash()">Start flashing</button><button onclick="delTg()">Delete file</button>':''}
   <div id=flst class=err></div>
   <small>For ESP32, ESP32-S3, C3 and C6 boards: on a port with a CP2102, CH340 or CH9102 USB chip, or on the S3 / C3 / C6 chip's own USB port. Export the board's sketch with its own board picked in Tools. <b>Start flashing</b> restarts the pad as a USB flasher (no Bluetooth meanwhile). Plug the board into the pad's USB-C port marked <b>USB</b> (not UART / COM) with an OTG adapter or USB-C cable; follow the OLED. The board needs 5 V from that port: bridge the USB-OTG pads on the S3 board if it has them, or use an OTG adapter with power in. When it is done the board restarts with its new code and the pad goes back to Bluetooth mode. A .ino.bin keeps the board's bootloader and partitions (it must have had an Arduino sketch before); use .merged.bin for a brand-new board.</small></div>
   <div class=card><h3>Backup / restore</h3><button onclick="backup()">Show backup</button><button onclick="restoreBox()">Restore a backup</button><div id=bk></div>
@@ -4636,8 +4643,10 @@ function upTg(){
   st.textContent='Uploading 0 % ...';x.send(fd);
 }
 async function startFlash(){
-  if(!confirm('The pad restarts as a USB flasher (no Bluetooth meanwhile). Then plug the board into its USB port and follow the OLED. Start?'))return;
-  const r=await fetch('/api/flash/start',{method:'POST'});
+  const m=Number(document.getElementById('flm').value),v=id=>Number(document.getElementById(id).value);
+  const body=m==1?{mode:1,tx:v('fltx'),rx:v('flrx'),en:v('flen'),boot:v('flboot')}:{mode:0};
+  if(!confirm('The pad restarts as a flasher (no Bluetooth meanwhile). '+(m==1?'Connect the 4 wires and GND':'Plug the board into its USB port')+' and follow the OLED. Start?'))return;
+  const r=await fetch('/api/flash/start',{method:'POST',body:JSON.stringify(body)});
   if(r.ok)app.innerHTML='<h3>Restarting as a USB flasher. Plug the board in and follow the OLED.</h3>';else alert(await r.text());
 }
 async function delTg(){await fetch('/api/flash/delete',{method:'POST'});loadFl();}
@@ -4891,6 +4900,9 @@ static void startConfigPortal() {
     d["msg"] = prefs.getString("tgmsg", "");
     const uint16_t c = prefs.getUShort("tgchip", 0);
     d["chip"] = c == 9 ? "ESP32-S3" : c == 5 ? "ESP32-C3" : c == 13 ? "ESP32-C6" : "ESP32";
+    d["mode"] = prefs.getUChar("flmode", 0);
+    d["tx"] = prefs.getChar("fltx", 17); d["rx"] = prefs.getChar("flrx", 18);
+    d["en"] = prefs.getChar("flen", 16); d["boot"] = prefs.getChar("flboot", 15);
     String o; serializeJson(d, o);
     server.send(200, "application/json", o);
   });
@@ -4900,6 +4912,20 @@ static void startConfigPortal() {
   }, tgUpload);
   server.on("/api/flash/start", HTTP_POST, []() {
     if (!ffatOk || !FFat.exists("/target.bin")) { server.send(400, "text/plain", "Save a file first"); return; }
+    JsonDocument q;
+    if (server.hasArg("plain") && !deserializeJson(q, server.arg("plain"))) {
+      const int mode = q["mode"] | 0;
+      if (mode == 1) {                                     // 4 wires: check the pins
+        const int p[4] = {q["tx"] | -1, q["rx"] | -1, q["en"] | -1, q["boot"] | -1};
+        static const char* const nm[4] = {"TX", "RX", "EN", "BOOT"};
+        for (int i = 0; i < 4; i++) {
+          if (!pinAllowed(p[i])) { server.send(400, "text/plain", String(nm[i]) + ": GPIO " + p[i] + " can't be used"); return; }
+          for (int j = 0; j < i; j++) if (p[j] == p[i]) { server.send(400, "text/plain", "The 4 pins must be different"); return; }
+        }
+        prefs.putChar("fltx", p[0]); prefs.putChar("flrx", p[1]); prefs.putChar("flen", p[2]); prefs.putChar("flboot", p[3]);
+      }
+      prefs.putUChar("flmode", mode == 1 ? 1 : 0);
+    }
     prefs.putBool("flashmode", true);
     server.send(200, "text/plain", "OK");
     restartInto(false);
@@ -5104,6 +5130,8 @@ static bool     uhJtag = false;                           // the board's own USB
 static uint16_t tgChip = 0;                               // chip of the file: 0 ESP32, 9 S3, 5 C3, 13 C6
 static uint8_t  uhIfData = 0, uhIfComm = 0, uhEpIn = 0, uhEpOut = 0;
 static uint16_t uhMpsIn = 64;
+static bool     flUart = false;                           // 4-wire mode: Serial1 + EN / BOOT pins
+static int8_t   flEn = -1, flBoot = -1;
 
 static void uhClientCb(const usb_host_client_event_msg_t* m, void*) {
   if (m->event == USB_HOST_CLIENT_EVENT_NEW_DEV) uhNewAddr = m->new_dev.address;
@@ -5131,6 +5159,7 @@ static bool uhCtrl(uint8_t type, uint8_t req, uint16_t val, uint16_t idx, const 
   return uhCtrlX->status == USB_TRANSFER_STATUS_COMPLETED;
 }
 static bool uhWrite(const uint8_t* d, size_t n) {
+  if (flUart) { Serial1.write(d, n); Serial1.flush(); return true; }
   if (n > uhOutX->data_buffer_size) return false;
   memcpy(uhOutX->data_buffer, d, n);
   uhOutX->num_bytes = n; uhOutX->device_handle = uhDev; uhOutX->bEndpointAddress = uhEpOut;
@@ -5154,6 +5183,7 @@ static int ch34xDivisor(uint32_t speed) {
   return (int)(((0x100 - div) << 8) | (fact << 2) | (uint32_t)ps);
 }
 static bool uhSetBaud(uint32_t baud) {
+  if (flUart) { Serial1.updateBaudRate(baud); return true; }
   if (uhKind == 1) { uint8_t b[4]; memcpy(b, &baud, 4); return uhCtrl(0x41, 0x1E, 0, uhIfData, b, 4); }
   if (uhKind == 2) {
     const int d = ch34xDivisor(baud);
@@ -5163,11 +5193,19 @@ static bool uhSetBaud(uint32_t baud) {
   return uhCtrl(0x21, 0x20, 0, uhIfComm, lc, 7);
 }
 static bool uhLines(bool dtr, bool rts) {                 // true = line active (like "DTR on" in a serial program)
+  if (flUart) {                                           // 4 wires: RTS = hold EN (reset) low, DTR = hold BOOT low
+    if (rts) { pinMode(flEn, OUTPUT); digitalWrite(flEn, LOW); } else pinMode(flEn, INPUT);      // released: the board's own pull-up
+    if (dtr) { pinMode(flBoot, OUTPUT); digitalWrite(flBoot, LOW); } else pinMode(flBoot, INPUT);
+    return true;
+  }
   if (uhKind == 1) return uhCtrl(0x41, 0x07, (dtr ? 1 : 0) | (rts ? 2 : 0) | 0x0300, uhIfData, nullptr, 0);
   if (uhKind == 2) return uhCtrl(0x40, 0xA4, (uint16_t)(~((dtr ? 0x20 : 0) | (rts ? 0x40 : 0)) & 0xFF), 0, nullptr, 0);
   return uhCtrl(0x21, 0x22, (dtr ? 1 : 0) | (rts ? 2 : 0), uhIfComm, nullptr, 0);
 }
-static void uhDrain() { uint8_t junk[64]; while (xStreamBufferReceive(uhRx, junk, sizeof junk, 0) > 0) {} }
+static void uhDrain() {
+  if (flUart) { while (Serial1.available()) Serial1.read(); return; }
+  uint8_t junk[64]; while (xStreamBufferReceive(uhRx, junk, sizeof junk, 0) > 0) {}
+}
 
 // opens the board and finds its serial interface; err says why not
 static bool uhOpen(uint8_t addr, String& err) {
@@ -5237,7 +5275,8 @@ static bool romSend(uint8_t op, const uint8_t* data, uint16_t len, uint32_t chk)
 static int romFrame(uint32_t timeoutMs) {                 // one answer frame into romResp, or -1
   const uint32_t t0 = millis(); bool in = false, esc = false; int n = 0; uint8_t b;
   while (millis() - t0 < timeoutMs) {
-    if (xStreamBufferReceive(uhRx, &b, 1, pdMS_TO_TICKS(5)) != 1) { if (uhGone) return -1; continue; }
+    if (flUart) { if (!Serial1.available()) { delay(1); continue; } b = (uint8_t)Serial1.read(); }
+    else if (xStreamBufferReceive(uhRx, &b, 1, pdMS_TO_TICKS(5)) != 1) { if (uhGone) return -1; continue; }
     if (!in) { if (b == 0xC0) { in = true; n = 0; } continue; }
     if (b == 0xC0) { if (n == 0) continue; return n; }
     if (esc) { esc = false; b = b == 0xDC ? 0xC0 : b == 0xDD ? 0xDB : b; }
@@ -5424,52 +5463,64 @@ static void runUsbFlasher() {
 #if defined(ARDUINO_USB_MODE) && ARDUINO_USB_MODE == 0
   flDone(false, "set Tools > USB Mode to Hardware CDC");
 #endif
-  if (prefs.getBool("flskip", false)) prefs.putBool("flskip", false);   // line check already passed
-  else usbLineCheck();                                                  // restarts by itself when it sees the board
-  flShow("STARTING", "", -1);
-  Serial.println("USB flasher: the USB port becomes a host now (serial output stops)");
-  Serial.flush(); Serial.end();
-  uhCtrlSem = xSemaphoreCreateBinary(); uhOutSem = xSemaphoreCreateBinary();
-  uhRx = xStreamBufferCreate(4096, 1);
-  usb_host_config_t hc = {};
-  hc.skip_phy_setup = false; hc.intr_flags = ESP_INTR_FLAG_LEVEL1;
-  if (usb_host_install(&hc) != ESP_OK) flDone(false, "USB host won't start");
-  xTaskCreatePinnedToCore(uhLibTask, "usblib", 4096, nullptr, 3, nullptr, 0);
-  usb_host_client_config_t cc = {};
-  cc.is_synchronous = false; cc.max_num_event_msg = 5;
-  cc.async.client_event_callback = uhClientCb; cc.async.callback_arg = nullptr;
-  if (usb_host_client_register(&cc, &uhClient) != ESP_OK) flDone(false, "USB host won't start");
-  xTaskCreatePinnedToCore(uhClientTask, "usbcli", 4096, nullptr, 3, nullptr, 0);
-
-  flShow("PLUG IN BOARD", "USB port; mode button = stop", -1);
-  const uint32_t t0 = millis();
-  uint32_t lastLook = 0;
-  while (!uhNewAddr) {
-    if (millis() - lastLook >= 500) {                      // also find a board that was already plugged in
-      lastLook = millis();
-      uint8_t list[4]; int n = 0;
-      if (usb_host_device_addr_list_fill(sizeof list, list, &n) == ESP_OK && n > 0) { uhNewAddr = list[0]; break; }
-      usb_host_lib_info_t li = {};
-      usb_host_lib_info(&li);
-      char b[40];
-      snprintf(b, sizeof b, "host on, %d dev, %lus left", li.num_devices, (unsigned long)((120000 - (millis() - t0)) / 1000));
-      flShow("PLUG IN BOARD", b, -1);
-    }
-    if (digitalRead(PIN_MODE_BTN) == LOW) flDone(false, "stopped");
-    if (millis() - t0 > 120000) flDone(false, "no board plugged in (2 min)");
-    delay(20);
-  }
-  delay(300);
   String err;
-  if (!uhOpen(uhNewAddr, err)) flDone(false, err);
-  {
-    const usb_device_desc_t* dd = nullptr;
-    if (usb_host_get_device_descriptor(uhDev, &dd) == ESP_OK && dd) {
-      char b[32]; snprintf(b, sizeof b, "USB ID %04X:%04X", dd->idVendor, dd->idProduct);
-      flShow("FOUND A BOARD", b, -1); delay(1200);
+  if (prefs.getUChar("flmode", 0) == 1) {                // 4 wires: TX, RX, EN, BOOT
+    const int tx = prefs.getChar("fltx", -1), rx = prefs.getChar("flrx", -1);
+    flEn = prefs.getChar("flen", -1); flBoot = prefs.getChar("flboot", -1);
+    if (tx < 0 || rx < 0 || flEn < 0 || flBoot < 0) flDone(false, "set the 4 pins in the setup page");
+    flUart = true;
+    pinMode(flEn, INPUT); pinMode(flBoot, INPUT);
+    Serial1.setRxBufferSize(4096);
+    Serial1.begin(115200, SERIAL_8N1, rx, tx);
+    char b[32]; snprintf(b, sizeof b, "TX%d RX%d EN%d BOOT%d", tx, rx, (int)flEn, (int)flBoot);
+    flShow("CONNECTING", b, -1);
+  } else {
+    if (prefs.getBool("flskip", false)) prefs.putBool("flskip", false);   // line check already passed
+    else usbLineCheck();                                                  // restarts by itself when it sees the board
+    flShow("STARTING", "", -1);
+    Serial.println("USB flasher: the USB port becomes a host now (serial output stops)");
+    Serial.flush(); Serial.end();
+    uhCtrlSem = xSemaphoreCreateBinary(); uhOutSem = xSemaphoreCreateBinary();
+    uhRx = xStreamBufferCreate(4096, 1);
+    usb_host_config_t hc = {};
+    hc.skip_phy_setup = false; hc.intr_flags = ESP_INTR_FLAG_LEVEL1;
+    if (usb_host_install(&hc) != ESP_OK) flDone(false, "USB host won't start");
+    xTaskCreatePinnedToCore(uhLibTask, "usblib", 4096, nullptr, 3, nullptr, 0);
+    usb_host_client_config_t cc = {};
+    cc.is_synchronous = false; cc.max_num_event_msg = 5;
+    cc.async.client_event_callback = uhClientCb; cc.async.callback_arg = nullptr;
+    if (usb_host_client_register(&cc, &uhClient) != ESP_OK) flDone(false, "USB host won't start");
+    xTaskCreatePinnedToCore(uhClientTask, "usbcli", 4096, nullptr, 3, nullptr, 0);
+
+    flShow("PLUG IN BOARD", "USB port; mode button = stop", -1);
+    const uint32_t t0 = millis();
+    uint32_t lastLook = 0;
+    while (!uhNewAddr) {
+      if (millis() - lastLook >= 500) {                      // also find a board that was already plugged in
+        lastLook = millis();
+        uint8_t list[4]; int n = 0;
+        if (usb_host_device_addr_list_fill(sizeof list, list, &n) == ESP_OK && n > 0) { uhNewAddr = list[0]; break; }
+        usb_host_lib_info_t li = {};
+        usb_host_lib_info(&li);
+        char b[40];
+        snprintf(b, sizeof b, "host on, %d dev, %lus left", li.num_devices, (unsigned long)((120000 - (millis() - t0)) / 1000));
+        flShow("PLUG IN BOARD", b, -1);
+      }
+      if (digitalRead(PIN_MODE_BTN) == LOW) flDone(false, "stopped");
+      if (millis() - t0 > 120000) flDone(false, "no board plugged in (2 min)");
+      delay(20);
     }
+    delay(300);
+    if (!uhOpen(uhNewAddr, err)) flDone(false, err);
+    {
+      const usb_device_desc_t* dd = nullptr;
+      if (usb_host_get_device_descriptor(uhDev, &dd) == ESP_OK && dd) {
+        char b[32]; snprintf(b, sizeof b, "USB ID %04X:%04X", dd->idVendor, dd->idProduct);
+        flShow("FOUND A BOARD", b, -1); delay(1200);
+      }
+    }
+    flShow("CONNECTING", uhJtag ? "board's own USB" : uhKind == 1 ? "CP210x chip" : uhKind == 2 ? "CH340 chip" : "CH9102 / CDC chip", -1);
   }
-  flShow("CONNECTING", uhJtag ? "board's own USB" : uhKind == 1 ? "CP210x chip" : uhKind == 2 ? "CH340 chip" : "CH9102 / CDC chip", -1);
   if (!romEnter()) flDone(false, "no answer: hold BOOT on the board, try again");
   {
     const int chip = romChip();
