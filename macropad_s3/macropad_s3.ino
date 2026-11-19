@@ -9,6 +9,9 @@ struct TextLine;
 /*
  * ESP32-S3 Wireless Macro Pad v5.5  (Arduino IDE / arduino-esp32 core 3.x)
  *
+ * NEW in v5.9: the USB flasher checks which chip the board has before it writes anything (a file for the wrong
+ *  chip is refused and the board is left as it was), and shows the board's USB ID when it finds one.
+ *
  * NEW in v5.8: the flasher's waiting screen shows what the USB host sees (to find out why a board isn't found).
  *  Built with USB CDC On Boot off: the pad's serial messages now come out of its COM port.
  *
@@ -424,7 +427,7 @@ static volatile bool     swMode = false;                  // the timer button wo
 static volatile uint8_t  swState = SW_IDLE;
 static volatile uint32_t swStartAt = 0, swAccum = 0;      // elapsed = swAccum (+ time since swStartAt while running)
 static uint32_t swElapsed() { return swState == SW_RUN ? swAccum + (millis() - swStartAt) : swAccum; }
-constexpr const char* FW_VERSION = "5.8";
+constexpr const char* FW_VERSION = "5.9";
 static volatile bool sotaBusy = false;                    // sending a firmware file to the stick right now
 static bool sleepAllowed() { return timerState == T_IDLE && swState == SW_IDLE && !sotaBusy; }   // never sleep with a timer / stopwatch / stick update going
 
@@ -5314,6 +5317,27 @@ static void flDone(bool ok, const String& msg) {
 }
 
 // writes the saved file to the board; returns "" when it worked
+// which chip answered: 0 ESP32, 2 S2, 5 C3, 9 S3, 13 C6 ... (-1 = unknown)
+static int romChip() {
+  int rl = 0;
+  if (romCmd(0x14, nullptr, 0, 0, 1000, &rl) && rl >= 20) {          // newer chips: security info carries the chip id
+    uint32_t id; memcpy(&id, romResp + 8 + 12, 4); return (int)id;
+  }
+  const uint32_t a = 0x40001000;                                      // older chips: magic value in ROM
+  if (romCmd(0x0A, (const uint8_t*)&a, 4, 0, 1000, nullptr)) {
+    uint32_t v; memcpy(&v, romResp + 4, 4);
+    if (v == 0x00F01D83u) return 0;
+    if (v == 0x000007C6u) return 2;
+    if (v == 0x00000009u) return 9;
+    if (v == 0x6921506Fu || v == 0x1B31506Fu || v == 0x4881606Fu || v == 0x4361606Fu) return 5;
+    if (v == 0x2CE0806Fu) return 13;
+  }
+  return -1;
+}
+static const char* chipName(int c) {
+  return c == 0 ? "ESP32" : c == 2 ? "ESP32-S2" : c == 5 ? "ESP32-C3" : c == 9 ? "ESP32-S3" : c == 13 ? "ESP32-C6" : "unknown chip";
+}
+
 static String romFlashFile(File& f, uint32_t size, uint32_t addr) {
   uint32_t p[6] = {0, 0, 0, 0, 0, 0};
   uint32_t nb[2] = {460800, 0};
@@ -5406,8 +5430,25 @@ static void runUsbFlasher() {
   delay(300);
   String err;
   if (!uhOpen(uhNewAddr, err)) flDone(false, err);
+  {
+    const usb_device_desc_t* dd = nullptr;
+    if (usb_host_get_device_descriptor(uhDev, &dd) == ESP_OK && dd) {
+      char b[32]; snprintf(b, sizeof b, "USB ID %04X:%04X", dd->idVendor, dd->idProduct);
+      flShow("FOUND A BOARD", b, -1); delay(1200);
+    }
+  }
   flShow("CONNECTING", uhJtag ? "board's own USB" : uhKind == 1 ? "CP210x chip" : uhKind == 2 ? "CH340 chip" : "CH9102 / CDC chip", -1);
   if (!romEnter()) flDone(false, "no answer: hold BOOT on the board, try again");
+  {
+    const int chip = romChip();
+    if (chip != (int)tgChip) {                             // wrong board for this file: write nothing
+      uhLines(false, true); delay(200); uhLines(false, false);   // let it start its own code again
+      f.close();
+      flDone(false, String("board is ") + chipName(chip) + ", file is for " + chipName(tgChip));
+    }
+    flShow("CONNECTED", chipName(chip), -1);
+    delay(800);
+  }
   err = romFlashFile(f, size, addr);
   f.close();
   if (err.length()) flDone(false, err);
