@@ -35,6 +35,7 @@ jobs:
           cp out/c6/joystick_c6.ino.bin files/joystick_c6.ino.bin
           cp out/hi/hiiiii_s3.ino.bin files/hiiiii_s3.ino.bin
           cp out/hu/hiiiii_update.ino.bin files/hiiiii_update.ino.bin
+          cp "$(find ~/.arduino15/packages/esp32/hardware/esp32 -name boot_app0.bin | head -1)" files/boot_app0.bin
           if [ -f out/hi/hiiiii_s3.ino.merged.bin ]; then cp out/hi/hiiiii_s3.ino.merged.bin files/hiiiii_s3.ino.merged.bin; fi
           gh release delete latest --yes --cleanup-tag || true
-          gh release create latest files/*.bin --title "Latest firmware" --notes "Built from ${GITHUB_SHA::7}. In the pad's setup page: macropad_s3.ino.bin goes in the main board area, joystick_c6.ino.bin in the stick area. hiiiii_s3 files are for the USB flasher card."
+          gh release create latest files/*.bin --title "Latest firmware" --notes "Built from ${GITHUB_SHA::7}. In the pad's setup page: macropad_s3.ino.bin goes in the main board area, joystick_c6.ino.bin in the stick area. USB rescue: flash boot_app0.bin at 0xE000 together with the .ino.bin at 0x10000."
