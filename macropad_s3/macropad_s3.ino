@@ -9,6 +9,9 @@ struct TextLine;
 /*
  * ESP32-S3 Wireless Macro Pad v5.5  (Arduino IDE / arduino-esp32 core 3.x)
  *
+ * NEW in v6.0: the USB flasher starts with a line check: it reads the USB wires (GPIO20 = D+, GPIO19 = D-) as plain
+ *  pins and shows them on the OLED, so you can see if the board's signal reaches the pad before the USB host starts.
+ *
  * NEW in v5.9: the USB flasher checks which chip the board has before it writes anything (a file for the wrong
  *  chip is refused and the board is left as it was), and shows the board's USB ID when it finds one.
  *
@@ -283,6 +286,7 @@ struct TextLine;
 #include <MD5Builder.h>
 #include <usb/usb_host.h>
 #include <freertos/stream_buffer.h>
+#include <soc/usb_serial_jtag_reg.h>
 
 #define USE_OLED 1
 #define OLED_HW_I2C 1      // 1 = hardware I2C (recommended), 0 = software I2C (old behaviour)
@@ -427,7 +431,7 @@ static volatile bool     swMode = false;                  // the timer button wo
 static volatile uint8_t  swState = SW_IDLE;
 static volatile uint32_t swStartAt = 0, swAccum = 0;      // elapsed = swAccum (+ time since swStartAt while running)
 static uint32_t swElapsed() { return swState == SW_RUN ? swAccum + (millis() - swStartAt) : swAccum; }
-constexpr const char* FW_VERSION = "5.9";
+constexpr const char* FW_VERSION = "6.0";
 static volatile bool sotaBusy = false;                    // sending a firmware file to the stick right now
 static bool sleepAllowed() { return timerState == T_IDLE && swState == SW_IDLE && !sotaBusy; }   // never sleep with a timer / stopwatch / stick update going
 
@@ -5382,6 +5386,32 @@ static String romFlashFile(File& f, uint32_t size, uint32_t addr) {
   return "";
 }
 
+// Line check: a powered USB board pulls its D+ wire high (1.5k), the pad's pins pull down weakly. GPIO20 = D+, GPIO19 = D-.
+// Seen high -> the pad restarts into the flasher with the USB host (the pins can't go back to USB without a restart).
+static void usbLineCheck() {
+  CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_USB_PAD_ENABLE);   // pins 19 / 20 as plain inputs
+  pinMode(19, INPUT_PULLDOWN); pinMode(20, INPUT_PULLDOWN);
+  const uint32_t t0 = millis(); uint32_t highSince = 0;
+  while (millis() - t0 < 45000) {
+    const int dp = digitalRead(20), dm = digitalRead(19);
+    char b[40]; snprintf(b, sizeof b, "D+ GPIO20: %d    D- GPIO19: %d", dp, dm);
+    flShow("LINE CHECK", b, -1);
+    if (dp || dm) {
+      if (!highSince) highSince = millis();
+      if (millis() - highSince > 800) {
+        if (dm && !dp) flDone(false, "D- is high: swap the green and white wires");
+        flShow("SIGNAL OK", "wires are good, starting USB", -1);
+        prefs.putBool("flashmode", true); prefs.putBool("flskip", true);
+        delay(1500);
+        ESP.restart();
+      }
+    } else highSince = 0;
+    if (digitalRead(PIN_MODE_BTN) == LOW) flDone(false, "stopped");
+    delay(100);
+  }
+  flDone(false, "no signal on GPIO19 / 20: check the wires and that the board has power");
+}
+
 // the whole flasher mode (started from the setup page). Never returns: the pad restarts at the end.
 static void runUsbFlasher() {
   FastLED.clear(true);
@@ -5394,6 +5424,8 @@ static void runUsbFlasher() {
 #if defined(ARDUINO_USB_MODE) && ARDUINO_USB_MODE == 0
   flDone(false, "set Tools > USB Mode to Hardware CDC");
 #endif
+  if (prefs.getBool("flskip", false)) prefs.putBool("flskip", false);   // line check already passed
+  else usbLineCheck();                                                  // restarts by itself when it sees the board
   flShow("STARTING", "", -1);
   Serial.println("USB flasher: the USB port becomes a host now (serial output stops)");
   Serial.flush(); Serial.end();
