@@ -9,6 +9,8 @@ struct TextLine;
 /*
  * ESP32-S3 Wireless Macro Pad v5.5  (Arduino IDE / arduino-esp32 core 3.x)
  *
+ * NEW in v6.3: fix: the setup page stayed on "Loading..." in v6.2.
+ *
  * NEW in v6.2: wireless updates for your other controllers; the wired flasher (v5.5-6.1) is gone.
  *  - Any ESP32 board whose sketch includes PadOTA.h (in the GitHub repository) says hello to the pad by radio.
  *    The setup page lists those controllers ("Wireless controllers" card); pick a file for one and it is sent by
@@ -438,7 +440,7 @@ static volatile bool     swMode = false;                  // the timer button wo
 static volatile uint8_t  swState = SW_IDLE;
 static volatile uint32_t swStartAt = 0, swAccum = 0;      // elapsed = swAccum (+ time since swStartAt while running)
 static uint32_t swElapsed() { return swState == SW_RUN ? swAccum + (millis() - swStartAt) : swAccum; }
-constexpr const char* FW_VERSION = "6.2";
+constexpr const char* FW_VERSION = "6.3";
 static volatile bool sotaBusy = false;                    // sending a firmware file to the stick right now
 static bool sleepAllowed() { return timerState == T_IDLE && swState == SW_IDLE && !sotaBusy; }   // never sleep with a timer / stopwatch / stick update going
 
@@ -4803,6 +4805,23 @@ function upCtl(i){
   const x=new XMLHttpRequest();x.open('POST','/api/ctl/file?i='+i);
   x.upload.onprogress=e=>{if(e.lengthComputable)st.textContent='Uploading '+Math.round(e.loaded*100/e.total)+' % ...';};
   x.onload=()=>{if(x.status==200){st.textContent='';alert('Saved on the pad. It is sent to the controller the next time both are on (outside this setup mode).');loadCt();}else st.textContent='Not saved: '+x.responseText;};
+  x.onerror=()=>{st.textContent='Upload failed (the connection was lost). Try again.';};
+  st.textContent='Uploading 0 % ...';x.send(fd);
+}
+function fwInfo(){const o=OTA;if(!o.pad)return '';return 'Main board: v'+o.pad+' &middot; Stick: '+(o.stick?'v'+o.stick:'not heard yet')
+  +(o.pend?'<br><b>Stick update waiting</b> ('+Math.round(o.size/1024)+' KB): it is sent when the stick is on.'+(o.remote?'':' Add the Wireless joystick card first.'):'')
+  +(o.msg?'<br>Last stick update: '+o.msg:'')+(o.fs?'':'<br>Stick updates need the Partition Scheme "16M Flash (3MB APP/9.9MB FATFS)".');}
+async function loadOta(){try{OTA=await (await fetch('/api/ota')).json();}catch(e){OTA={};}render();}
+async function cancelStick(){await fetch('/api/ota/stickcancel',{method:'POST'});loadOta();}
+function upFw(k){
+  const f=document.getElementById(k=='pad'?'fpad':'fstick').files[0],st=document.getElementById('fwst');
+  if(!f){alert('Choose a .bin file first.');return;}
+  if(/merged|bootloader|partitions/i.test(f.name)&&!confirm(f.name+' looks like the wrong file: the right one ends in .ino.bin. Send it anyway?'))return;
+  if(k=='pad'&&!confirm('Update the main board now? It restarts when it is done.'))return;
+  const fd=new FormData();fd.append('f',f,f.name);
+  const x=new XMLHttpRequest();x.open('POST','/api/ota/'+k);
+  x.upload.onprogress=e=>{if(e.lengthComputable)st.textContent='Uploading '+Math.round(e.loaded*100/e.total)+' % ...';};
+  x.onload=()=>{if(x.status==200){if(k=='pad')app.innerHTML='<h3>Main board updated. Restarting in Bluetooth mode...</h3>';else{alert('Stick file saved on the pad. It is sent to the stick the next time both are on (outside this setup mode).');loadOta();}}else st.textContent='Not updated: '+x.responseText;};
   x.onerror=()=>{st.textContent='Upload failed (the connection was lost). Try again.';};
   st.textContent='Uploading 0 % ...';x.send(fd);
 }
