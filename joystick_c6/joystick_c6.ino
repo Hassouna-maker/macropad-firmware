@@ -1,7 +1,8 @@
 /*
- * Wireless joystick board v3.2 (Waveshare ESP32-C6-Zero) -> ESP-NOW -> MacroPad main board
+ * Wireless joystick board v3.3 (Waveshare ESP32-C6-Zero) -> ESP-NOW -> MacroPad main board
  * Needs main board (ESP32-S3) code v4.7 or newer (v4.9 for the stopwatch, v5.3 for updates over the air).
  *
+ * NEW in v3.3: favourite effects (ticked in the pad's setup page) - the effect button steps only through them; effects show live while you pick them there.
  * NEW in v3.2: 118 more effects copied from WLED (https://github.com/wled/WLED, EUPL-1.2, see LICENSE in the repository).
  *  They sit between "song progress" and "off" in the effect list (names start with W:). Music reactive ones are left out.
  *  Needs the pad code v6.4 or newer to show their names on the pad's OLED and in its setup page.
@@ -82,7 +83,7 @@
 #include "WledFx1D.h"
 #include "WledUndef.h"
 
-constexpr const char* FW_VERSION = "3.2";              // sent to the pad (shown in its setup page)
+constexpr const char* FW_VERSION = "3.3";              // sent to the pad (shown in its setup page)
 
 // ---- joystick
 constexpr uint8_t PIN_X      = 0;    // stick X (analog)
@@ -195,6 +196,12 @@ static const char* const FX_NAMES[] = {
   "android","bouncing balls","sinelon","popcorn","larson scanner","police","tri wipe","confetti",
   "joystick","tilt color","push meter","warp","click burst","lava lamp","ocean","twin comets","song progress"};   // then the WLED effects (names start with W:), then "off"
 constexpr uint8_t N_FX = E_OFF + 1;
+// Favourite effects (ticked in the pad's setup page): the effect button steps only through these. None ticked = all.
+constexpr uint8_t FAV_B = (N_FX + 7) / 8;                 // 23 bytes; the pad uses the same size
+static uint8_t favMask[FAV_B] = {0};
+struct __attribute__((packed)) FavPkt { uint8_t magic; uint8_t pv; uint8_t fav[FAV_B]; };   // pad -> stick, magic 0xB9
+static volatile bool favMsg = false;
+static FavPkt        favRx;
 static_assert(sizeof(FX_NAMES) / sizeof(FX_NAMES[0]) == E_WLED, "effect names and enum do not match");
 static char wledName[wfx::WFX1D_N][24];                     // "W:" + WLED's own name
 static struct WledNameInit { WledNameInit() { for (uint8_t i = 0; i < wfx::WFX1D_N; i++) snprintf(wledName[i], sizeof wledName[i], "W:%s", wfx::WFX1D[i].name); } } wledNameInit;
@@ -758,8 +765,17 @@ static void setLedCount(uint16_t n) {
 static bool     fxDirty = false;
 static uint32_t fxChangedMs = 0;
 
+static uint8_t nextFavFx(int d) {
+  bool any = false; for (uint8_t i = 0; i < FAV_B; i++) if (favMask[i]) any = true;
+  if (!any) return (uint8_t)((curFx + N_FX + d) % N_FX);
+  for (int k = 1; k <= N_FX; k++) {
+    const int i = (((int)curFx + d * k) % N_FX + N_FX) % N_FX;
+    if (favMask[i >> 3] & (1 << (i & 7))) return (uint8_t)i;
+  }
+  return curFx;
+}
 static void changeFx(int d) {
-  curFx = (uint8_t)((curFx + N_FX + d) % N_FX);
+  curFx = nextFavFx(d);
   resetFx();
   fxDirty = true; fxChangedMs = millis();
   Serial.printf("Effect %d/%d: %s\n", curFx + 1, N_FX, fxName(curFx));
@@ -904,6 +920,10 @@ static void onRecv(const esp_now_recv_info_t* info, const uint8_t* d, int len) {
     if (padKnown && memcmp(info->src_addr, padMac, 6) == 0) { memcpy(&pinfo, d, sizeof pinfo); pinfoAt = millis(); }
     return;
   }
+  if (info && info->src_addr && len == (int)sizeof(FavPkt) && d[0] == 0xB9) {          // favourites / live preview
+    if (padKnown && memcmp(info->src_addr, padMac, 6) == 0 && !favMsg) { memcpy(&favRx, d, sizeof favRx); favMsg = true; }
+    return;
+  }
   if (!info || !info->src_addr || len != (int)sizeof(PadPkt) || padMsg) return;
   PadPkt p; memcpy(&p, d, sizeof p);
   if (p.magic != 0xB7) return;
@@ -935,7 +955,14 @@ static void applySettings(const PadPkt& p) {
                 nLeds, maxBright, fxName(curFx), p.sleepMin);
 }
 
+static void favTick() {
+  if (!favMsg) return;
+  FavPkt f = favRx; favMsg = false;
+  if (memcmp(f.fav, favMask, FAV_B) != 0) { memcpy(favMask, f.fav, FAV_B); prefs.putBytes("fav", favMask, FAV_B); }
+  if (f.pv < N_FX && f.pv != curFx) { curFx = f.pv; resetFx(); markUsed(); }   // shown live; kept only when the pad saves it
+}
 static void padTick() {
+  favTick();
   if (!padMsg) return;
   PadPkt p = rxPkt;
   if (!padKnown) {                                         // first pad that answers: remember it
@@ -1104,6 +1131,7 @@ void setup() {
   prefs.begin("joy", false);
   if (forgetPad) { prefs.remove("pad"); prefs.remove("cfg"); Serial.println("Pad forgotten"); }
   padKnown = prefs.getBytes("pad", padMac, 6) == 6;
+  prefs.getBytes("fav", favMask, FAV_B);
   uint8_t s = prefs.getUChar("fx", 0);
   if (s < N_FX) curFx = s;
   nLeds     = constrain(prefs.getUShort("n", DEF_LEDS), 1, MAX_LEDS);

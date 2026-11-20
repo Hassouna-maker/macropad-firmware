@@ -7,8 +7,10 @@ struct ArForm;
 struct TextLine;
 
 /*
- * ESP32-S3 Wireless Macro Pad v6.4  (Arduino IDE / arduino-esp32 core 3.x)
+ * ESP32-S3 Wireless Macro Pad v6.5  (Arduino IDE / arduino-esp32 core 3.x)
  *
+ * NEW in v6.5: favourite effects. Tick them in the setup page and the strip, matrix and stick effect buttons cycle only through those.
+ *   Effects also show live on the LEDs while you pick them in the setup page (stick needs v3.3).
  * NEW in v6.4: WLED effects. 118 strip effects and 30 matrix effects copied from WLED v16.0.1 (https://github.com/wled/WLED,
  *  EUPL-1.2, see LICENSE and NOTICE). Their names start with W: and they sit before "off" in the effect lists (button,
  *  setup page, OLED). The music reactive ones are left out. The stick (code v3.2) gets the strip ones too.
@@ -408,6 +410,24 @@ static const char* matFxName(uint8_t i)   { return i < MF_WLED ? MAT_FX[i]   : i
 static inline bool isWledStrip(uint8_t fx) { return fx >= SF_WLED && fx < SF_OFF; }
 static inline bool isWledMat(uint8_t fx)   { return fx >= MF_WLED && fx < MF_OFF; }
 
+// ---- favourite effects (ticked in the setup page): the effect buttons step only through the ticked ones.
+// Nothing ticked = all effects. Saved at once (not with "Save & Restart"). One bit per effect.
+constexpr uint8_t STICK_BASE_N = 65;                          // the stick's own effects, before the WLED ones
+constexpr uint8_t FAV_S_B = (N_STRIP_FX + 7) / 8, FAV_M_B = (N_MAT_FX + 7) / 8, FAV_K_B = (STICK_BASE_N + wfx::WFX1D_N + 1 + 7) / 8;
+static uint8_t favS[FAV_S_B], favM[FAV_M_B], favK[FAV_K_B];
+static bool favAny(const uint8_t* m, uint8_t nb) { for (uint8_t i = 0; i < nb; i++) if (m[i]) return true; return false; }
+static bool favOn(const uint8_t* m, uint8_t i) { return m[i >> 3] & (1 << (i & 7)); }
+static uint8_t favStep(const uint8_t* m, uint8_t nb, uint8_t n, uint8_t cur, int dir) {
+  if (!favAny(m, nb)) return (uint8_t)((cur + n + dir) % n);
+  for (int k = 1; k <= n; k++) {
+    const int i = (((int)cur + dir * k) % n + n) % n;
+    if (favOn(m, (uint8_t)i)) return (uint8_t)i;
+  }
+  return cur;
+}
+static volatile int16_t  pvS = -1, pvM = -1;                  // effect the setup page shows live (-1 = none)
+static volatile uint32_t pvUntil = 0;                         // ... until then (the page asks again every time you pick one)
+
 // OLED main screen: clock, page, cycle through animations, or one animation
 static const char* const OANIM_NAMES[] = {"stripes","rain","starfield","cube","waves","bounce","life","snow",
                                           "tunnel","eyes","rocket","night drive","fish tank"};
@@ -466,7 +486,7 @@ static volatile bool     swMode = false;                  // the timer button wo
 static volatile uint8_t  swState = SW_IDLE;
 static volatile uint32_t swStartAt = 0, swAccum = 0;      // elapsed = swAccum (+ time since swStartAt while running)
 static uint32_t swElapsed() { return swState == SW_RUN ? swAccum + (millis() - swStartAt) : swAccum; }
-constexpr const char* FW_VERSION = "6.4";
+constexpr const char* FW_VERSION = "6.5";
 static volatile bool sotaBusy = false;                    // sending a firmware file to the stick right now
 static bool sleepAllowed() { return timerState == T_IDLE && swState == SW_IDLE && !sotaBusy; }   // never sleep with a timer / stopwatch / stick update going
 
@@ -914,10 +934,10 @@ static Action parseAction(String s) {
 // next/prev while a strip or matrix is off just turns it back on (without changing the effect)
 static void runLocal(uint8_t l) {
   switch (l) {
-    case 1: if (stripOff) stripOff = false; else curSFx = (curSFx + 1) % N_STRIP_FX; break;
-    case 2: if (stripOff) stripOff = false; else curSFx = (curSFx + N_STRIP_FX - 1) % N_STRIP_FX; break;
-    case 3: if (matOn) { if (matOff) matOff = false; else curMFx = (curMFx + 1) % N_MAT_FX; } break;
-    case 4: if (matOn) { if (matOff) matOff = false; else curMFx = (curMFx + N_MAT_FX - 1) % N_MAT_FX; } break;
+    case 1: if (stripOff) stripOff = false; else curSFx = favStep(favS, FAV_S_B, N_STRIP_FX, curSFx, 1); break;
+    case 2: if (stripOff) stripOff = false; else curSFx = favStep(favS, FAV_S_B, N_STRIP_FX, curSFx, -1); break;
+    case 3: if (matOn) { if (matOff) matOff = false; else curMFx = favStep(favM, FAV_M_B, N_MAT_FX, curMFx, 1); } break;
+    case 4: if (matOn) { if (matOff) matOff = false; else curMFx = favStep(favM, FAV_M_B, N_MAT_FX, curMFx, -1); } break;
     case 5: oledPage = (oledPage + 1) % 5; return;
     case 6: oledOn = !oledOn; return;
     case 10: setProfile(profile ^ 1, true); return;        // iPad <-> PC (until the next connection in automatic mode)
@@ -1381,6 +1401,7 @@ static const char* const STICK_FX[] = {
   "song progress"};                                              // then the WLED effects (same order as in the stick code), then "off"
 constexpr uint8_t STICK_WLED0 = sizeof(STICK_FX) / sizeof(STICK_FX[0]);
 constexpr uint8_t N_STICK_FX = STICK_WLED0 + wfx::WFX1D_N + 1;
+static_assert(STICK_WLED0 == STICK_BASE_N, "stick effect count changed");
 static const char* stickFxName(uint8_t f) { return f < STICK_WLED0 ? STICK_FX[f] : f < STICK_WLED0 + wfx::WFX1D_N ? wledStripName[f - STICK_WLED0] : "off"; }
 static bool needRemote = false;
 static PadPkt  stickCfg = {};                                 // stick settings from the setup page
@@ -1461,6 +1482,14 @@ static void addStickPeer() {
   peer.channel = 0; peer.ifidx = WIFI_IF_STA; peer.encrypt = false;
   esp_now_add_peer(&peer);
 }
+// pad -> stick (magic 0xB9): the stick's favourite effects, and an effect to show right now (pv, 255 = none)
+struct __attribute__((packed)) FavPkt { uint8_t magic; uint8_t pv; uint8_t fav[FAV_K_B]; };
+static void sendStickFav(uint8_t pv) {
+  if (!stickPaired) return;
+  FavPkt p; p.magic = 0xB9; p.pv = pv; memcpy(p.fav, favK, sizeof p.fav);
+  addStickPeer();
+  esp_now_send(stickMac, (const uint8_t*)&p, sizeof p);
+}
 // Tell the stick what the pad is doing (timer, battery, mode, song, night), 5 times a second while it is on.
 static void stickInfoTick() {
   static uint32_t last = 0;
@@ -1480,6 +1509,8 @@ static void stickInfoTick() {
   p.night = nightNow;
   addStickPeer();
   esp_now_send(stickMac, (const uint8_t*)&p, sizeof p);
+  static uint8_t favCnt = 0;
+  if (++favCnt >= 15) { favCnt = 0; sendStickFav(255); }      // every 3 s: the stick keeps its favourites up to date
 }
 // Answer the paired stick with its settings (this is also how the stick learns our address).
 // Sent again every 250 ms until the stick reports it has them.
@@ -3151,6 +3182,8 @@ static void renderFrame(uint32_t dt) {
   const bool conn = hid && hid->isConnected();
   const uint8_t fl = flashLevel;
   const bool sOff = stripOff, mOff = matOff;
+  const bool pv = pvUntil && (int32_t)(millis() - pvUntil) < 0;   // the setup page shows an effect live
+  const bool pvs = cfgMode && pv && pvS >= 0, pvm = cfgMode && pv && pvM >= 0;
 
   // ---- idle dimming: fade down slowly after DIM_AFTER_MS, come back quickly on any use
   uint8_t target = (cfgMode || forceWhite || timerState != T_IDLE || swState != SW_IDLE || (matOn && isGameFx(curMFx)) || idleMs() < (int32_t)DIM_AFTER_MS) ? 255 : DIM_LEVEL;
@@ -3164,11 +3197,11 @@ static void renderFrame(uint32_t dt) {
   // ---- strip
   uint16_t n = sCfg.count;
   if (forceWhite)    fill_solid(sBuf, n, CRGB::White);
-  else if (cfgMode)  fill_solid(sBuf, n, CHSV(25, 255, tbeat(millis(), 45, 30, 255)));       // amber = config mode
+  else if (cfgMode && !pvs) fill_solid(sBuf, n, CHSV(25, 255, tbeat(millis(), 45, 30, 255)));   // amber = config mode
   else if (sOff)     { fill_solid(sBuf, n, CRGB(0, 0, 0)); sWasOff = true; }                 // switched off by 3 s hold
-  else if (!conn)    fill_solid(sBuf, n, CHSV(160, 255, tbeat(millis(), 20, 10, 140)));      // blue = waiting for host
+  else if (!conn && !cfgMode) fill_solid(sBuf, n, CHSV(160, 255, tbeat(millis(), 20, 10, 140)));      // blue = waiting for host
   else {
-    uint8_t fx = curSFx;
+    uint8_t fx = pvs ? (uint8_t)pvS : curSFx;
     if (fx != lastSFx || sWasOff) { lastSFx = fx; sWasOff = false; fill_solid(sBuf, MAX_STRIP, CRGB::Black); memset(heat1, 0, sizeof heat1);
       if (isWledStrip(fx)) wfx::wfxSelect(0, wfx::WFX1D[fx - SF_WLED]); else wfx::gSegs[0].resetRuntime(); }
     stripFx(fx, n);
@@ -3183,10 +3216,10 @@ static void renderFrame(uint32_t dt) {
   if (matOn) {
     uint8_t W = mCfg.w, H = mCfg.h; uint16_t N = W * H;
     if (forceWhite)   fill_solid(mBuf, N, CRGB::White);
-    else if (cfgMode) fill_solid(mBuf, N, CHSV(25, 255, tbeat(millis(), 45, 30, 255)));
+    else if (cfgMode && !pvm) fill_solid(mBuf, N, CHSV(25, 255, tbeat(millis(), 45, 30, 255)));
     else if (mOff)    { fill_solid(mBuf, N, CRGB(0, 0, 0)); mWasOff = true; }
     else {
-      uint8_t fx = curMFx;
+      uint8_t fx = pvm ? (uint8_t)pvM : curMFx;
       if (fx != lastMFx || mWasOff) { lastMFx = fx; mWasOff = false; resetMat();
         if (isWledMat(fx)) wfx::wfxSelect(1, wfx::WFX2D[fx - MF_WLED]); else wfx::gSegs[1].resetRuntime(); }
       matFx(fx, W, H, N);
@@ -4624,6 +4657,7 @@ static const char PAGE[] PROGMEM = R"HTML(<!DOCTYPE html><html><head><meta chars
 <meta name=viewport content="width=device-width,initial-scale=1"><title>MacroPad Setup</title>
 <style>
 body{font-family:system-ui,sans-serif;background:#111;color:#eee;margin:0 auto;padding:12px;max-width:640px}
+.fv{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid #222}.fv a{flex:1;cursor:pointer}details{margin-top:8px}summary{padding:6px 0}
 .card{background:#1d1d22;border-radius:10px;padding:12px;margin:10px 0}
 h3{margin:0 0 8px;display:flex;justify-content:space-between;align-items:center;text-transform:capitalize}
 label{display:block;font-size:13px;color:#aaa;margin:6px 0}
@@ -4637,7 +4671,7 @@ textarea{width:100%;box-sizing:border-box;min-height:120px;background:#26262c;co
 </style></head><body>
 <h2>MacroPad Setup</h2><div id=app>Loading...</div>
 <script>
-let cfg={},FX={strip:[],matrix:[]};
+let cfg={},FX={strip:[],matrix:[]},FAVS={s:'',m:'',k:''},FOPEN={};
 const esc=v=>String(v??'').replace(/"/g,'&quot;');
 const fld=(l,p,v,n,x='')=>`<label>${l}<input data-p="${p}" ${n?'data-n=1 type=number':''} value="${esc(v)}" ${x}></label>`;
 const sel=(l,p,v,o,n)=>`<label>${l}<select data-p="${p}" ${n?'data-n=1':''}>${o.map(q=>{const a=Array.isArray(q)?q:[q,q];return `<option value="${a[0]}" ${a[0]==v?'selected':''}>${a[1]}</option>`}).join('')}</select></label>`;
@@ -4685,9 +4719,27 @@ document.addEventListener('input',e=>{
     setp(pk,v);if(f)f.value=v;t.selectedIndex=0;upErr(pk,v);return;}
   const p=t.dataset.p;if(!p)return;
   setp(p,t.dataset.n?Number(t.value):t.value);
+  if(p=='led.fx')favPv('s',FX.strip.indexOf(t.value));else if(p=='matrix.fx')favPv('m',FX.matrix.indexOf(t.value));else if(/lfx$/.test(p)&&Number(t.value)<255)favPv('k',Number(t.value));
   if(t.dataset.act)upErr(p,t.value);
 });
 const yn=[[0,'No'],[1,'Yes']];
+const fbit=(h,i)=>(parseInt(h.substr((i>>3)*2,2)||'0',16)>>(i&7))&1;
+const fcount=(k,n)=>{let c=0;for(let i=0;i<n;i++)c+=fbit(FAVS[k],i);return c};
+const POSTH={'Content-Type':'application/x-www-form-urlencoded'};
+function favPv(k,i){if(i>=0)fetch('/api/preview',{method:'POST',headers:POSTH,body:'k='+k+'&i='+i}).catch(()=>{})}
+function favTick(k,i,on,n){const a=[];for(let j=0;j<FAVS[k].length/2;j++)a.push(parseInt(FAVS[k].substr(j*2,2),16));
+  if(on)a[i>>3]|=1<<(i&7);else a[i>>3]&=~(1<<(i&7));FAVS[k]=a.map(v=>('0'+v.toString(16)).slice(-2)).join('');
+  fetch('/api/fav',{method:'POST',headers:POSTH,body:'k='+k+'&i='+i+'&on='+(on?1:0)}).catch(()=>{});
+  const e=document.getElementById('fc_'+k);if(e)e.textContent=fcount(k,n)}
+function favClear(k){fetch('/api/favclear',{method:'POST',headers:POSTH,body:'k='+k}).catch(()=>{});FAVS[k]=FAVS[k].replace(/./g,'0');render()}
+function favBox(k,title,names){const n=names.length;
+  return `<details ${FOPEN[k]?'open':''} ontoggle="FOPEN['${k}']=this.open"><summary><b>${title}</b> - <span id=fc_${k}>${fcount(k,n)}</span> ticked</summary>
+  <small>Tick the ones the button should step through (nothing ticked = all of them). Tap a name to see it on the LEDs now.</small>
+  <button type=button onclick="favClear('${k}')">Untick all</button>
+  ${names.map((nm,i)=>`<div class=fv><input type=checkbox style="width:auto" ${fbit(FAVS[k],i)?'checked':''} onchange="favTick('${k}',${i},this.checked,${n})"><a onclick="favPv('${k}',${i})">${esc(nm)}</a></div>`).join('')}</details>`}
+function favCard(){return `<div class=card><h3>Favourite effects</h3>
+  <small>The effect buttons (pad strip, pad matrix and the stick) only cycle through the effects you tick. Ticks are saved at once. Picking an effect here, or in the Effect lists below, shows it on the LEDs straight away.</small>
+  ${favBox('s','Pad strip',FX.strip)}${favBox('m','Pad matrix',FX.matrix)}${favBox('k','Stick strip',SFXJ.slice(1).map(q=>q[1]))}</div>`}
 const SFXJ=[[255,"Keep the stick's own choice"]].concat(["solid", "blink", "breathe", "wipe", "wipe random", "random colors", "sweep", "dynamic", "colorloop", "rainbow", "scan", "dual scan", "fade", "theater chase", "theater rainbow", "running lights", "saw", "twinkle", "dissolve", "sparkle", "flash sparkle", "hyper sparkle", "strobe", "strobe rainbow", "blink rainbow", "chase", "chase rainbow", "chase flash", "comet", "fireworks", "rain", "fire 2012", "fire flicker", "candle", "colortwinkle", "meteor", "juggle", "bpm", "pride", "palette", "lake", "ripple", "plasma", "lightning", "gradient", "heartbeat", "noise", "aurora", "android", "bouncing balls", "sinelon", "popcorn", "larson scanner", "police", "tri wipe", "confetti", "joystick", "tilt color", "push meter", "warp", "click burst", "lava lamp", "ocean", "twin comets", "song progress")HTML" WFX1D_JS_NAMES R"HTML(,"off"].map((n,i)=>[i,n]));
 const SPD=[1,2,3,4,5,6,7,8,9,10].map(v=>[v,v==1?'1 (slowest)':v==3?'3 (default)':v==10?'10 (fastest)':String(v)]);
 const TZ=[['Beirut','EET-2EEST,M3.5.0/0,M10.5.0/0'],['UTC','UTC0'],['London','GMT0BST,M3.5.0/1,M10.5.0'],['Paris / Berlin','CET-1CEST,M3.5.0,M10.5.0/3'],['Istanbul / Riyadh','<+03>-3'],['Dubai','<+04>-4'],['New York','EST5EDT,M3.2.0,M11.1.0'],['Los Angeles','PST8PDT,M3.2.0,M11.1.0']];
@@ -4704,6 +4756,7 @@ function render(){
   <small><b>Macros:</b> write several actions separated by commas, with <b>wait:200</b> for a 0.2 s pause, for example <b>selectall, copy, wait:200, appswitch, paste</b>.
   Plain names (copy, paste, home, play, volup, click...) work on both iPad and PC by themselves.
   For a different action on the PC write both, separated by | , for example <b>key:gui+h | key:gui+d</b> (iPad | PC). Long press = hold 0.5 s, double tap = two presses within 0.3 s; leave them empty if not needed. A Mac counts as PC: choose Always iPad if you use a Mac.</small></div>
+  ${favCard()}
   <div class=card><h3>LED strip (max 256)</h3>${fld('LED count (1-256). Long strips: set the LED power limit above to what your power can give','led.count',L.count,1)}${fld('Brightness (5-255)','led.bright',L.bright,1)}
   ${fld('Colour / hue (0-255)','led.hue',L.hue,1)}${fld('Speed (0-255)','led.speed',L.speed,1)}${sel('Effect (start-up)','led.fx',L.fx,FX.strip)}
   <small>Button on GPIO 39: press = next effect, hold 0.7-3 s then release = previous, hold 3 s = off / on.</small></div>
@@ -4862,7 +4915,7 @@ function upFw(k){
   st.textContent='Uploading 0 % ...';x.send(fd);
 }
 async function forget(){await fetch('/api/forgetstick',{method:'POST'});STICK.mac='';render();}
-Promise.all([fetch('/api/config').then(r=>r.json()),fetch('/api/fx').then(r=>r.json()),fetch('/api/stick').then(r=>r.json()).catch(()=>({mac:''})),fetch('/api/ota').then(r=>r.json()).catch(()=>({})),fetch('/api/ctls').then(r=>r.json()).catch(()=>([]))]).then(([c,f,k,o,t])=>{FX=f;STICK=k;OTA=o;CT=t;cfg=norm(c);render()});
+Promise.all([fetch('/api/config').then(r=>r.json()),fetch('/api/fx').then(r=>r.json()),fetch('/api/stick').then(r=>r.json()).catch(()=>({mac:''})),fetch('/api/ota').then(r=>r.json()).catch(()=>({})),fetch('/api/ctls').then(r=>r.json()).catch(()=>([])),fetch('/api/favs').then(r=>r.json()).catch(()=>({s:'',m:'',k:''}))]).then(([c,f,k,o,t,fv])=>{FX=f;STICK=k;OTA=o;CT=t;FAVS=Object.assign({s:"",m:"",k:""},fv);cfg=norm(c);render()});
 </script></body></html>)HTML";
 
 static void restartInto(bool toConfig) {
@@ -5026,6 +5079,36 @@ static void startConfigPortal() {
     server.send(200, "application/json", s);
   });
 
+  server.on("/api/favs", HTTP_GET, []() {                 // ticked favourite effects (hex, one bit per effect)
+    auto hex = [](const uint8_t* m, uint8_t n) { String h; char b[3]; for (uint8_t i = 0; i < n; i++) { snprintf(b, sizeof b, "%02x", m[i]); h += b; } return h; };
+    server.send(200, "application/json", "{\"s\":\"" + hex(favS, FAV_S_B) + "\",\"m\":\"" + hex(favM, FAV_M_B) + "\",\"k\":\"" + hex(favK, FAV_K_B) + "\"}");
+  });
+  server.on("/api/fav", HTTP_POST, []() {                  // k = s / m / k (strip, matrix, stick), i = effect number, on = 1 / 0
+    const String k = server.arg("k"); const int i = server.arg("i").toInt(); const bool on = server.arg("on") == "1";
+    uint8_t* m = k == "s" ? favS : k == "m" ? favM : k == "k" ? favK : nullptr;
+    const int n = k == "s" ? N_STRIP_FX : k == "m" ? N_MAT_FX : N_STICK_FX;
+    if (!m || i < 0 || i >= n) { server.send(400, "text/plain", "bad"); return; }
+    if (on) m[i >> 3] |= (uint8_t)(1 << (i & 7)); else m[i >> 3] &= (uint8_t)~(1 << (i & 7));
+    prefs.putBytes(k == "s" ? "favS" : k == "m" ? "favM" : "favK", m, k == "s" ? FAV_S_B : k == "m" ? FAV_M_B : FAV_K_B);
+    if (k == "k") sendStickFav(255);
+    server.send(200, "text/plain", "OK");
+  });
+  server.on("/api/favclear", HTTP_POST, []() {             // untick all of one list (= the buttons use every effect)
+    const String k = server.arg("k");
+    if (k == "s") { memset(favS, 0, sizeof favS); prefs.putBytes("favS", favS, sizeof favS); }
+    else if (k == "m") { memset(favM, 0, sizeof favM); prefs.putBytes("favM", favM, sizeof favM); }
+    else if (k == "k") { memset(favK, 0, sizeof favK); prefs.putBytes("favK", favK, sizeof favK); sendStickFav(255); }
+    else { server.send(400, "text/plain", "bad"); return; }
+    server.send(200, "text/plain", "OK");
+  });
+  server.on("/api/preview", HTTP_POST, []() {              // show effect i on the strip (s), matrix (m) or the stick (k) right now
+    const String k = server.arg("k"); const int i = server.arg("i").toInt();
+    if (k == "s" && i >= 0 && i < N_STRIP_FX)      { pvS = i; stripOff = false; pvUntil = millis() + 120000; }
+    else if (k == "m" && i >= 0 && i < N_MAT_FX)   { pvM = i; matOff = false;   pvUntil = millis() + 120000; }
+    else if (k == "k" && i >= 0 && i < N_STICK_FX) { sendStickFav((uint8_t)i); sendStickFav((uint8_t)i); }
+    else { server.send(400, "text/plain", "bad"); return; }
+    server.send(200, "text/plain", "OK");
+  });
   server.on("/api/save", HTTP_POST, []() {
     String body = server.arg("plain");
     if (!body.length() || body.length() > MAX_JSON_BYTES) { server.send(400, "text/plain", "Config empty or too large"); return; }
@@ -5349,6 +5432,7 @@ void setup() {
   uint8_t s = prefs.getUChar("sfx", 255), m = prefs.getUChar("mfx", 255);
   if (s < N_STRIP_FX) curSFx = s;
   if (m < N_MAT_FX)   curMFx = m;
+  prefs.getBytes("favS", favS, sizeof favS); prefs.getBytes("favM", favM, sizeof favM); prefs.getBytes("favK", favK, sizeof favK);
   int8_t oh = prefs.getChar("ohome", -100);                // main screen last chosen with oled:main
   if (oh == HOME_CLOCK || oh == HOME_PAGE || oh == HOME_CYCLE || oh == HOME_MOVIES || (oh >= 0 && oh < (int8_t)N_OANIM)) oHome = oh;
   if (rtcValid) { stripOff = rtcStripOff; matOff = rtcMatOff; }   // strip/matrix on/off kept across sleep
