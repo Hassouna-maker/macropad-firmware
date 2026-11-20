@@ -7,8 +7,9 @@ struct ArForm;
 struct TextLine;
 
 /*
- * ESP32-S3 Wireless Macro Pad v6.6  (Arduino IDE / arduino-esp32 core 3.x)
+ * ESP32-S3 Wireless Macro Pad v6.7  (Arduino IDE / arduino-esp32 core 3.x)
  *
+ * NEW in v6.7: night mode dims much more visibly (the % now follows how the eye sees brightness; also on the stick).
  * NEW in v6.6: key flash is now fully white (was tinted by the effect); slower scroll mode on the stick; night mode retries the clock every 10 min if it was not set.
  * NEW in v6.5: favourite effects. Tick them in the setup page and the strip, matrix and stick effect buttons cycle only through those.
  *   (the setup page now also reaches the stick: effects show live on it; works while the pad's Wi-Fi is on channel 1, i.e. not joined to a home Wi-Fi)
@@ -488,7 +489,7 @@ static volatile bool     swMode = false;                  // the timer button wo
 static volatile uint8_t  swState = SW_IDLE;
 static volatile uint32_t swStartAt = 0, swAccum = 0;      // elapsed = swAccum (+ time since swStartAt while running)
 static uint32_t swElapsed() { return swState == SW_RUN ? swAccum + (millis() - swStartAt) : swAccum; }
-constexpr const char* FW_VERSION = "6.6";
+constexpr const char* FW_VERSION = "6.7";
 static volatile bool sotaBusy = false;                    // sending a firmware file to the stick right now
 static bool sleepAllowed() { return timerState == T_IDLE && swState == SW_IDLE && !sotaBusy; }   // never sleep with a timer / stopwatch / stick update going
 
@@ -3175,7 +3176,9 @@ static uint8_t nightScale() {
   time_t tt = time(nullptr); struct tm lt; localtime_r(&tt, &lt);
   const int h = lt.tm_hour, a = cCfg.nfrom, b = cCfg.nto;
   const bool in = a == b ? false : a < b ? (h >= a && h < b) : (h >= a || h < b);   // e.g. 22 -> 7 crosses midnight
-  return v = in ? (uint8_t)max(1, cCfg.nlvl * 255 / 100) : 255;
+  if (!in) return v = 255;
+  const uint8_t l = (uint8_t)(cCfg.nlvl * 255 / 100);                 // eyes see brightness on a curve: 25 % of the power still looks bright,
+  return v = max<uint8_t>(1, scale8(l, l));                            // so the % is applied squared (50 % = a quarter of the power)
 }
 
 static void renderFrame(uint32_t dt) {
@@ -4580,7 +4583,7 @@ static void applyConfig(JsonDocument& d) {
   JsonObject ck = d["clock"];
   cCfg.on  = (int)(ck["on"] | 1) != 0;
   cCfg.h24 = (int)(ck["h24"] | 1) != 0;
-  cCfg.night = (int)(ck["night"] | 0) != 0;
+  cCfg.night = ck["night"].as<int>() != 0;
   cCfg.nfrom = constrain((int)(ck["nfrom"] | 22), 0, 23);
   cCfg.nto   = constrain((int)(ck["nto"] | 7), 0, 23);
   cCfg.nlvl  = constrain((int)(ck["nlvl"] | 25), 1, 100);
