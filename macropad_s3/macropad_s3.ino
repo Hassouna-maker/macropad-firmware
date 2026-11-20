@@ -10,6 +10,7 @@ struct TextLine;
  * ESP32-S3 Wireless Macro Pad v6.5  (Arduino IDE / arduino-esp32 core 3.x)
  *
  * NEW in v6.5: favourite effects. Tick them in the setup page and the strip, matrix and stick effect buttons cycle only through those.
+ *   (the setup page now also reaches the stick: effects show live on it; works while the pad's Wi-Fi is on channel 1, i.e. not joined to a home Wi-Fi)
  *   Effects also show live on the LEDs while you pick them in the setup page (stick needs v3.3).
  * NEW in v6.4: WLED effects. 118 strip effects and 30 matrix effects copied from WLED v16.0.1 (https://github.com/wled/WLED,
  *  EUPL-1.2, see LICENSE and NOTICE). Their names start with W: and they sit before "off" in the effect lists (button,
@@ -1486,6 +1487,8 @@ static void addStickPeer() {
 struct __attribute__((packed)) FavPkt { uint8_t magic; uint8_t pv; uint8_t fav[FAV_K_B]; };
 static void sendStickFav(uint8_t pv) {
   if (!stickPaired) return;
+  static bool radioUp = false;                                // setup page: the radio to the stick is not running yet
+  if (cfgMode && !radioUp) { if (esp_now_init() != ESP_OK) return; radioUp = true; }
   FavPkt p; p.magic = 0xB9; p.pv = pv; memcpy(p.fav, favK, sizeof p.fav);
   addStickPeer();
   esp_now_send(stickMac, (const uint8_t*)&p, sizeof p);
@@ -5045,7 +5048,7 @@ static void startConfigPortal() {
     WiFi.mode(WIFI_AP_STA);
     WiFi.begin(cCfg.ssid, cCfg.pass);
     homeState = 1; homeSince = millis();
-  } else WiFi.mode(WIFI_AP);
+  } else WiFi.mode(WIFI_AP_STA);                // AP + an idle station: the station sends the live effect to the stick (channel 1, same as the AP)
   WiFi.softAP(AP_SSID, AP_PASS);
   IPAddress ip = WiFi.softAPIP();
   dns.start(53, "*", ip);                       // captive portal: all names -> us
