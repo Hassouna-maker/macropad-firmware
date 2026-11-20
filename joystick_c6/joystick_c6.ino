@@ -1,7 +1,8 @@
 /*
- * Wireless joystick board v3.3 (Waveshare ESP32-C6-Zero) -> ESP-NOW -> MacroPad main board
+ * Wireless joystick board v3.4 (Waveshare ESP32-C6-Zero) -> ESP-NOW -> MacroPad main board
  * Needs main board (ESP32-S3) code v4.7 or newer (v4.9 for the stopwatch, v5.3 for updates over the air).
  *
+ * NEW in v3.4: night-mode dimming is remembered (no more full-bright moments when a radio packet is lost or at start-up).
  * NEW in v3.3: favourite effects (ticked in the pad's setup page) - the effect button steps only through them; effects show live while you pick them there.
  * NEW in v3.2: 118 more effects copied from WLED (https://github.com/wled/WLED, EUPL-1.2, see LICENSE in the repository).
  *  They sit between "song progress" and "off" in the effect list (names start with W:). Music reactive ones are left out.
@@ -83,7 +84,7 @@
 #include "WledFx1D.h"
 #include "WledUndef.h"
 
-constexpr const char* FW_VERSION = "3.3";              // sent to the pad (shown in its setup page)
+constexpr const char* FW_VERSION = "3.4";              // sent to the pad (shown in its setup page)
 
 // ---- joystick
 constexpr uint8_t PIN_X      = 0;    // stick X (analog)
@@ -1234,7 +1235,11 @@ void loop() {
     uint8_t target = (warnSleep || idle <= DIM_AFTER_MS) ? maxBright : dimTo;   // full brightness for the warning
     if (curBright < target)      curBright = (uint8_t)min<int>(target, curBright + 10);
     else if (curBright > target) curBright = (uint8_t)max<int>(target, curBright - 2);
-    const uint8_t night = infoFresh() ? pinfo.night : 255;               // the pad's night mode dims us too
+    static uint8_t lastNight = 255; static uint32_t nightAt = 0;         // the pad's night mode dims us too; a lost packet must not
+    if (infoFresh()) { if (pinfo.night != lastNight) { lastNight = pinfo.night; prefs.putUChar("ngt", lastNight); } nightAt = millis(); }
+    else if (!nightAt) { lastNight = prefs.getUChar("ngt", 255); nightAt = millis(); }       // after start-up: the last value we knew
+    else if (millis() - nightAt > 120000UL) lastNight = 255;                                 // pad gone for 2 min: full brightness
+    const uint8_t night = lastNight;
     FastLED.setBrightness(max<uint8_t>(1, scale8(curBright, night)));
 
     if (stripOff) fill_solid(leds, nLeds, CRGB(0, 0, 0));

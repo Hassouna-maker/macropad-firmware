@@ -7,8 +7,9 @@ struct ArForm;
 struct TextLine;
 
 /*
- * ESP32-S3 Wireless Macro Pad v6.5  (Arduino IDE / arduino-esp32 core 3.x)
+ * ESP32-S3 Wireless Macro Pad v6.6  (Arduino IDE / arduino-esp32 core 3.x)
  *
+ * NEW in v6.6: key flash is now fully white (was tinted by the effect); slower scroll mode on the stick; night mode retries the clock every 10 min if it was not set.
  * NEW in v6.5: favourite effects. Tick them in the setup page and the strip, matrix and stick effect buttons cycle only through those.
  *   (the setup page now also reaches the stick: effects show live on it; works while the pad's Wi-Fi is on channel 1, i.e. not joined to a home Wi-Fi)
  *   Effects also show live on the LEDs while you pick them in the setup page (stick needs v3.3).
@@ -487,7 +488,7 @@ static volatile bool     swMode = false;                  // the timer button wo
 static volatile uint8_t  swState = SW_IDLE;
 static volatile uint32_t swStartAt = 0, swAccum = 0;      // elapsed = swAccum (+ time since swStartAt while running)
 static uint32_t swElapsed() { return swState == SW_RUN ? swAccum + (millis() - swStartAt) : swAccum; }
-constexpr const char* FW_VERSION = "6.5";
+constexpr const char* FW_VERSION = "6.6";
 static volatile bool sotaBusy = false;                    // sending a firmware file to the stick right now
 static bool sleepAllowed() { return timerState == T_IDLE && swState == SW_IDLE && !sotaBusy; }   // never sleep with a timer / stopwatch / stick update going
 
@@ -1940,8 +1941,9 @@ public:
     if (invX) dx = -dx;
     if (invY) dy = -dy;
     if (scroll || (remote && fresh && (rjBtn & 2))) {      // scroll mode: web page setting, or toggled on the stick board
-      sv += -dy * 0.12f;                                   // up/down (own memory, so mouse leftovers don't leak in)
-      sh +=  dx * 0.12f;                                   // left/right
+      const float scf = (remote && fresh && (rjBtn & 2)) ? 0.05f : 0.12f;   // stick scroll mode is slower (was 0.12)
+      sv += -dy * scf;                                   // up/down (own memory, so mouse leftovers don't leak in)
+      sh +=  dx * scf;                                     // left/right
       int w = (int)sv; sv -= w;
       int p = (int)sh; sh -= p;
       ax = ay = 0;
@@ -3212,7 +3214,7 @@ static void renderFrame(uint32_t dt) {
   CRGB sw = CRGB::White; sw.nscale8_video(sB);
   for (uint16_t i = 0; i < n; i++) {
     sOut[i] = sBuf[i]; sOut[i].nscale8_video(sB);
-    if (fl && !sOff) nblend(sOut[i], sw, fl >> 1);
+    if (fl && !sOff) nblend(sOut[i], sw, fl);
   }
 
   // ---- matrix
@@ -3230,7 +3232,7 @@ static void renderFrame(uint32_t dt) {
     CRGB mw = CRGB::White; mw.nscale8_video(mB);
     for (uint16_t i = 0; i < N; i++) {
       mOut[i] = mBuf[i]; mOut[i].nscale8_video(mB);
-      if (fl && !mOff) nblend(mOut[i], mw, fl >> 1);
+      if (fl && !mOff) nblend(mOut[i], mw, fl);
     }
   }
   // ---- about to sleep: strip and matrix flash amber twice a second (at full brightness, not dimmed)
@@ -5492,6 +5494,8 @@ void loop() {
   } else {
     for (uint8_t i = 0; i < ncomps; i++) comps[i]->update();
     fxButtonsTick();
+    { static uint32_t lastClk = 0;                          // night mode needs the clock: try again every 10 min if it was not set at start-up
+      if (cCfg.night && !ckBusy && !sotaBusy && !timeValid() && millis() - lastClk > 600000UL) { lastClk = millis(); syncClock(); } }
     if (profileDirty) { profileDirty = false; prefs.putUChar("prof", profile); }   // remember iPad / PC
     if (radioOn) { ctlTick(); ctlResult(); }                 // other controllers: list + updates by radio
     if (needRemote) {
