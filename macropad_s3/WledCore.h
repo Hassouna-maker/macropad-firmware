@@ -661,7 +661,7 @@ static inline void rgb2hsv(const CRGBW& rgb, CHSV32& hsv) {
 inline CHSV32::CHSV32(const CRGBW& rgb) { rgb2hsv(rgb, *this); }
 inline CHSV32& CHSV32::operator=(const CRGBW& rgb) { rgb2hsv(rgb, *this); return *this; }
 static inline void hsv2rgb_spectrum(const CHSV32& hsv, CRGBW& rgb) {
-  CRGB c; hsv2rgb_spectrum(CHSV((uint8_t)(hsv.h >> 8), hsv.s, hsv.v), c); rgb = c;
+  CRGB c; ::hsv2rgb_spectrum(CHSV((uint8_t)(hsv.h >> 8), hsv.s, hsv.v), c); rgb = c;
 }
 static inline CHSV rgb2hsv(const CRGB c) { return rgb2hsv_approximate(c); }
 static inline CRGBW hsv2rgb(const CHSV32& hsv) { return CRGBW(hsv); }
