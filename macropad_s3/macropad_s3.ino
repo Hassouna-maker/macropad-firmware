@@ -7,9 +7,15 @@ struct ArForm;
 struct TextLine;
 
 /*
- * ESP32-S3 Wireless Macro Pad v5.5  (Arduino IDE / arduino-esp32 core 3.x)
+ * ESP32-S3 Wireless Macro Pad v6.4  (Arduino IDE / arduino-esp32 core 3.x)
  *
- * NEW in v6.3: fix: the setup page stayed on "Loading..." in v6.2.
+ * NEW in v6.4: WLED effects. 118 strip effects and 30 matrix effects copied from WLED v16.0.1 (https://github.com/wled/WLED,
+ *  EUPL-1.2, see LICENSE and NOTICE). Their names start with W: and they sit before "off" in the effect lists (button,
+ *  setup page, OLED). The music reactive ones are left out. The stick (code v3.2) gets the strip ones too.
+ *  Each effect starts with WLED's own default speed / intensity / palette; the pad's speed setting scales the speed,
+ *  the colour setting is WLED's colour 1 (effects that use three colours get two more colours from it).
+ *
+ * v6.3: fix: the setup page stayed on "Loading..." in v6.2.
  *
  * NEW in v6.2: wireless updates for your other controllers; the wired flasher (v5.5-6.1) is gone.
  *  - Any ESP32 board whose sketch includes PadOTA.h (in the GitHub repository) says hello to the pad by radio.
@@ -296,6 +302,11 @@ struct TextLine;
 #include <NimBLEHIDDevice.h>
 #include <Update.h>
 #include <FFat.h>
+#include "WledCore.h"      // WLED effects (EUPL-1.2, see LICENSE): strip + matrix effects copied from WLED v16.0.1
+#include "WledFx1D.h"
+#include "WledFx2D.h"
+#include "WledUndef.h"
+#include "WledNames.h"
 
 #define USE_OLED 1
 #define OLED_HW_I2C 1      // 1 = hardware I2C (recommended), 0 = software I2C (old behaviour)
@@ -360,27 +371,42 @@ static const char* const STRIP_FX[] = {"breathe","static","rainbow","colorloop",
                                        "confetti","fire","juggle","bpm","theater","running","aurora","wipe",
                                        "comet","sparkle","fireworks","chase","pride","lake","heartbeat",
                                        "police","candle","gradient","key ripple","encoder rainbow","joystick",
-                                       "typing heat","day color","song progress","off"};
+                                       "typing heat","day color","song progress"};           // then the WLED effects, then "off"
 enum { SF_BREATHE, SF_STATIC, SF_RAINBOW, SF_COLORLOOP, SF_SCANNER, SF_METEOR, SF_TWINKLE, SF_CONFETTI,
        SF_FIRE, SF_JUGGLE, SF_BPM, SF_THEATER, SF_RUNNING, SF_AURORA, SF_WIPE,
        SF_COMET, SF_SPARKLE, SF_FIREWORKS, SF_CHASE, SF_PRIDE, SF_LAKE, SF_HEARTBEAT,
-       SF_POLICE, SF_CANDLE, SF_GRADIENT, SF_RIPPLE, SF_ENCRAIN, SF_JOYLIGHT, SF_HEAT, SF_DAY, SF_SONG, SF_OFF };
-constexpr uint8_t N_STRIP_FX = sizeof(STRIP_FX) / sizeof(STRIP_FX[0]);
-static_assert(N_STRIP_FX == SF_OFF + 1, "strip effect names and enum do not match");
+       SF_POLICE, SF_CANDLE, SF_GRADIENT, SF_RIPPLE, SF_ENCRAIN, SF_JOYLIGHT, SF_HEAT, SF_DAY, SF_SONG,
+       SF_WLED, SF_OFF = SF_WLED + wfx::WFX1D_N };   // SF_WLED.. = effects copied from WLED
+constexpr uint8_t N_STRIP_FX = SF_OFF + 1;
+static_assert(sizeof(STRIP_FX) / sizeof(STRIP_FX[0]) == SF_WLED, "strip effect names and enum do not match");
 
 static const char* const MAT_FX[] = {"plasma","psfire","fire","rain","waves","lava","ripples","life","stars",
                                      "lissajous","rainbow","swirl","tunnel","radar","noise","ocean","checker",
                                      "bounce","fireworks","starfield","equalizer","heart","sinewave","orbits",
                                      "aurora","metaballs","fireflies","static","text","day color","timer",
-                                     "joystick","snake","pong","breakout","dodge","tetris","flappy","invaders","off"};
+                                     "joystick","snake","pong","breakout","dodge","tetris","flappy","invaders"};   // then the WLED effects, then "off"
 enum { MF_PLASMA, MF_PSFIRE, MF_FIRE, MF_RAIN, MF_WAVES, MF_LAVA, MF_RIPPLES, MF_LIFE, MF_STARS,
        MF_LISSAJOUS, MF_RAINBOW, MF_SWIRL, MF_TUNNEL, MF_RADAR, MF_NOISE, MF_OCEAN, MF_CHECKER,
        MF_BOUNCE, MF_FIREWORKS, MF_STARFIELD, MF_EQ, MF_HEART, MF_SINEWAVE, MF_ORBITS,
        MF_AURORA, MF_METABALLS, MF_FIREFLIES, MF_STATIC, MF_TEXT, MF_DAY, MF_TIMER, MF_JOY,
-       MF_SNAKE, MF_PONG, MF_BREAKOUT, MF_DODGE, MF_TETRIS, MF_FLAPPY, MF_INVADERS, MF_OFF };
+       MF_SNAKE, MF_PONG, MF_BREAKOUT, MF_DODGE, MF_TETRIS, MF_FLAPPY, MF_INVADERS,
+       MF_WLED, MF_OFF = MF_WLED + wfx::WFX2D_N };   // MF_WLED.. = effects copied from WLED
 static bool isGameFx(uint8_t fx) { return fx >= MF_SNAKE && fx <= MF_INVADERS; }
-constexpr uint8_t N_MAT_FX = sizeof(MAT_FX) / sizeof(MAT_FX[0]);
-static_assert(N_MAT_FX == MF_OFF + 1, "matrix effect names and enum do not match");
+constexpr uint8_t N_MAT_FX = MF_OFF + 1;
+static_assert(sizeof(MAT_FX) / sizeof(MAT_FX[0]) == MF_WLED, "matrix effect names and enum do not match");
+
+// names of the WLED effects: "W:" + WLED's own name (so they never clash with the pad's own effects)
+static char wledStripName[wfx::WFX1D_N][24], wledMatName[wfx::WFX2D_N][24];
+static struct WledNameInit {
+  WledNameInit() {
+    for (uint8_t i = 0; i < wfx::WFX1D_N; i++) snprintf(wledStripName[i], sizeof wledStripName[i], "W:%s", wfx::WFX1D[i].name);
+    for (uint8_t i = 0; i < wfx::WFX2D_N; i++) snprintf(wledMatName[i], sizeof wledMatName[i], "W:%s", wfx::WFX2D[i].name);
+  }
+} wledNameInit;
+static const char* stripFxName(uint8_t i) { return i < SF_WLED ? STRIP_FX[i] : i < SF_OFF ? wledStripName[i - SF_WLED] : "off"; }
+static const char* matFxName(uint8_t i)   { return i < MF_WLED ? MAT_FX[i]   : i < MF_OFF ? wledMatName[i - MF_WLED]   : "off"; }
+static inline bool isWledStrip(uint8_t fx) { return fx >= SF_WLED && fx < SF_OFF; }
+static inline bool isWledMat(uint8_t fx)   { return fx >= MF_WLED && fx < MF_OFF; }
 
 // OLED main screen: clock, page, cycle through animations, or one animation
 static const char* const OANIM_NAMES[] = {"stripes","rain","starfield","cube","waves","bounce","life","snow",
@@ -440,7 +466,7 @@ static volatile bool     swMode = false;                  // the timer button wo
 static volatile uint8_t  swState = SW_IDLE;
 static volatile uint32_t swStartAt = 0, swAccum = 0;      // elapsed = swAccum (+ time since swStartAt while running)
 static uint32_t swElapsed() { return swState == SW_RUN ? swAccum + (millis() - swStartAt) : swAccum; }
-constexpr const char* FW_VERSION = "6.3";
+constexpr const char* FW_VERSION = "6.4";
 static volatile bool sotaBusy = false;                    // sending a firmware file to the stick right now
 static bool sleepAllowed() { return timerState == T_IDLE && swState == SW_IDLE && !sotaBusy; }   // never sleep with a timer / stopwatch / stick update going
 
@@ -1352,8 +1378,10 @@ static const char* const STICK_FX[] = {
   "lake", "ripple", "plasma", "lightning", "gradient", "heartbeat", "noise", "aurora",
   "android", "bouncing balls", "sinelon", "popcorn", "larson scanner", "police", "tri wipe", "confetti",
   "joystick", "tilt color", "push meter", "warp", "click burst", "lava lamp", "ocean", "twin comets",
-  "song progress", "off"};
-constexpr uint8_t N_STICK_FX = sizeof(STICK_FX) / sizeof(STICK_FX[0]);
+  "song progress"};                                              // then the WLED effects (same order as in the stick code), then "off"
+constexpr uint8_t STICK_WLED0 = sizeof(STICK_FX) / sizeof(STICK_FX[0]);
+constexpr uint8_t N_STICK_FX = STICK_WLED0 + wfx::WFX1D_N + 1;
+static const char* stickFxName(uint8_t f) { return f < STICK_WLED0 ? STICK_FX[f] : f < STICK_WLED0 + wfx::WFX1D_N ? wledStripName[f - STICK_WLED0] : "off"; }
 static bool needRemote = false;
 static PadPkt  stickCfg = {};                                 // stick settings from the setup page
 static ActPair rjClick, rjDbl, rjLong, rjSdbl;                // stick gestures -> actions
@@ -2135,7 +2163,10 @@ static void stripFx(uint8_t fx, uint16_t n) {
       }
       if (pl) { uint16_t hd = (uint16_t)f; if (hd > n - 1) hd = n - 1; sBuf[hd] += CHSV(sh, 60, tbeat(t, 40, 40, 160)); }   // the head glows
     } break;
-    default: fill_solid(sBuf, n, CRGB::Black); break;
+    default:
+      if (isWledStrip(fx)) wfx::wfxFrame(0, wfx::WFX1D[fx - SF_WLED], sBuf, n, 0, 0, nullptr, sCfg.speed, sCfg.hue, millis());
+      else fill_solid(sBuf, n, CRGB::Black);
+      break;
   }
 }
 
@@ -3092,7 +3123,10 @@ static void matFx(uint8_t fx, uint8_t W, uint8_t H, uint16_t N) {
     case MF_TETRIS:   gameTetris(W, H, N); break;
     case MF_FLAPPY:   gameFlappy(W, H, N); break;
     case MF_INVADERS: gameInvaders(W, H, N); break;
-    default: fill_solid(mBuf, N, CRGB::Black); break;
+    default:
+      if (isWledMat(fx)) wfx::wfxFrame(1, wfx::WFX2D[fx - MF_WLED], mBuf, N, W, H, XY, mCfg.speed, mCfg.hue, millis());
+      else fill_solid(mBuf, N, CRGB::Black);
+      break;
   }
 }
 
@@ -3135,7 +3169,8 @@ static void renderFrame(uint32_t dt) {
   else if (!conn)    fill_solid(sBuf, n, CHSV(160, 255, tbeat(millis(), 20, 10, 140)));      // blue = waiting for host
   else {
     uint8_t fx = curSFx;
-    if (fx != lastSFx || sWasOff) { lastSFx = fx; sWasOff = false; fill_solid(sBuf, MAX_STRIP, CRGB::Black); memset(heat1, 0, sizeof heat1); }
+    if (fx != lastSFx || sWasOff) { lastSFx = fx; sWasOff = false; fill_solid(sBuf, MAX_STRIP, CRGB::Black); memset(heat1, 0, sizeof heat1);
+      if (isWledStrip(fx)) wfx::wfxSelect(0, wfx::WFX1D[fx - SF_WLED]); else wfx::gSegs[0].resetRuntime(); }
     stripFx(fx, n);
   }
   CRGB sw = CRGB::White; sw.nscale8_video(sB);
@@ -3152,7 +3187,8 @@ static void renderFrame(uint32_t dt) {
     else if (mOff)    { fill_solid(mBuf, N, CRGB(0, 0, 0)); mWasOff = true; }
     else {
       uint8_t fx = curMFx;
-      if (fx != lastMFx || mWasOff) { lastMFx = fx; mWasOff = false; resetMat(); }
+      if (fx != lastMFx || mWasOff) { lastMFx = fx; mWasOff = false; resetMat();
+        if (isWledMat(fx)) wfx::wfxSelect(1, wfx::WFX2D[fx - MF_WLED]); else wfx::gSegs[1].resetRuntime(); }
       matFx(fx, W, H, N);
     }
     CRGB mw = CRGB::White; mw.nscale8_video(mB);
@@ -4261,8 +4297,8 @@ static void oledTick() {
     } else {
       uint8_t page = ((int32_t)(fxPopupUntil - now) > 0) ? 1 : (uint8_t)oledPage;
       bool conn = hid && hid->isConnected();
-      const char* sn = stripOff ? "OFF" : STRIP_FX[curSFx];
-      const char* mn = !matOn ? "(none)" : matOff ? "OFF" : MAT_FX[curMFx];
+      const char* sn = stripOff ? "OFF" : stripFxName(curSFx);
+      const char* mn = !matOn ? "(none)" : matOff ? "OFF" : matFxName(curMFx);
       switch (page) {
         case 0:
           snprintf(L[1], 13, "%.12s", deviceName.c_str());
@@ -4276,7 +4312,7 @@ static void oledTick() {
           if (rjFx != 254 && (int32_t)(now - rjLast) < 15000) {     // wireless stick on: its effect too
             const uint8_t f = rjFx;
             snprintf(L[6], 13, "STICK FX");
-            snprintf(L[7], 13, "%.12s", f == 255 ? "OFF" : f < N_STICK_FX ? STICK_FX[f] : "?");
+            snprintf(L[7], 13, "%.12s", f == 255 ? "OFF" : f < N_STICK_FX ? stickFxName(f) : "?");
           }
           break;
         case 2:
@@ -4448,8 +4484,8 @@ static void clearComponents() {
   ncomps = 0;
 }
 
-static uint8_t findFx(const char* const* names, uint8_t n, const String& s) {
-  for (uint8_t i = 0; i < n; i++) if (s.equalsIgnoreCase(names[i])) return i;
+static uint8_t findFx(const char* (*nameOf)(uint8_t), uint8_t n, const String& s) {
+  for (uint8_t i = 0; i < n; i++) if (s.equalsIgnoreCase(nameOf(i))) return i;
   return 0;
 }
 
@@ -4466,7 +4502,7 @@ static void applyConfig(JsonDocument& d) {
   sCfg.bright = constrain((int)(l["bright"] | 60), 5, 255);
   sCfg.hue = (uint8_t)(int)(l["hue"] | 160);
   sCfg.speed = constrain((int)(l["speed"] | 128), 0, 255);
-  curSFx = findFx(STRIP_FX, N_STRIP_FX, String(l["fx"] | "breathe"));
+  curSFx = findFx(stripFxName, N_STRIP_FX, String(l["fx"] | "breathe"));
 
   JsonObject m = d["matrix"];
   mCfg.w = constrain((int)(m["w"] | 0), 0, (int)MAX_W);
@@ -4482,7 +4518,7 @@ static void applyConfig(JsonDocument& d) {
   matGameSpeed = constrain((int)(m["gspeed"] | 3), 1, 10);
   matTextSpeed = constrain((int)(m["tspeed"] | 3), 1, 10);
   matOn = mCfg.w > 0 && mCfg.h > 0;
-  curMFx = findFx(MAT_FX, N_MAT_FX, String(m["fx"] | "plasma"));
+  curMFx = findFx(matFxName, N_MAT_FX, String(m["fx"] | "plasma"));
 
   JsonObject o = d["oled"];
   oCfg.on = (int)(o["on"] | 1) != 0;
@@ -4652,7 +4688,7 @@ document.addEventListener('input',e=>{
   if(t.dataset.act)upErr(p,t.value);
 });
 const yn=[[0,'No'],[1,'Yes']];
-const SFXJ=[[255,"Keep the stick's own choice"]].concat(["solid", "blink", "breathe", "wipe", "wipe random", "random colors", "sweep", "dynamic", "colorloop", "rainbow", "scan", "dual scan", "fade", "theater chase", "theater rainbow", "running lights", "saw", "twinkle", "dissolve", "sparkle", "flash sparkle", "hyper sparkle", "strobe", "strobe rainbow", "blink rainbow", "chase", "chase rainbow", "chase flash", "comet", "fireworks", "rain", "fire 2012", "fire flicker", "candle", "colortwinkle", "meteor", "juggle", "bpm", "pride", "palette", "lake", "ripple", "plasma", "lightning", "gradient", "heartbeat", "noise", "aurora", "android", "bouncing balls", "sinelon", "popcorn", "larson scanner", "police", "tri wipe", "confetti", "joystick", "tilt color", "push meter", "warp", "click burst", "lava lamp", "ocean", "twin comets", "song progress", "off"].map((n,i)=>[i,n]));
+const SFXJ=[[255,"Keep the stick's own choice"]].concat(["solid", "blink", "breathe", "wipe", "wipe random", "random colors", "sweep", "dynamic", "colorloop", "rainbow", "scan", "dual scan", "fade", "theater chase", "theater rainbow", "running lights", "saw", "twinkle", "dissolve", "sparkle", "flash sparkle", "hyper sparkle", "strobe", "strobe rainbow", "blink rainbow", "chase", "chase rainbow", "chase flash", "comet", "fireworks", "rain", "fire 2012", "fire flicker", "candle", "colortwinkle", "meteor", "juggle", "bpm", "pride", "palette", "lake", "ripple", "plasma", "lightning", "gradient", "heartbeat", "noise", "aurora", "android", "bouncing balls", "sinelon", "popcorn", "larson scanner", "police", "tri wipe", "confetti", "joystick", "tilt color", "push meter", "warp", "click burst", "lava lamp", "ocean", "twin comets", "song progress")HTML" WFX1D_JS_NAMES R"HTML(,"off"].map((n,i)=>[i,n]));
 const SPD=[1,2,3,4,5,6,7,8,9,10].map(v=>[v,v==1?'1 (slowest)':v==3?'3 (default)':v==10?'10 (fastest)':String(v)]);
 const TZ=[['Beirut','EET-2EEST,M3.5.0/0,M10.5.0/0'],['UTC','UTC0'],['London','GMT0BST,M3.5.0/1,M10.5.0'],['Paris / Berlin','CET-1CEST,M3.5.0,M10.5.0/3'],['Istanbul / Riyadh','<+03>-3'],['Dubai','<+04>-4'],['New York','EST5EDT,M3.2.0,M11.1.0'],['Los Angeles','PST8PDT,M3.2.0,M11.1.0']];
 function render(){
@@ -4979,9 +5015,9 @@ static void startConfigPortal() {
   });
   server.on("/api/fx", HTTP_GET, []() {
     String s = "{\"strip\":[";
-    for (uint8_t i = 0; i < N_STRIP_FX; i++) { if (i) s += ','; s += '"'; s += STRIP_FX[i]; s += '"'; }
+    for (uint8_t i = 0; i < N_STRIP_FX; i++) { if (i) s += ','; s += '"'; s += stripFxName(i); s += '"'; }
     s += "],\"matrix\":[";
-    for (uint8_t i = 0; i < N_MAT_FX; i++)   { if (i) s += ','; s += '"'; s += MAT_FX[i];   s += '"'; }
+    for (uint8_t i = 0; i < N_MAT_FX; i++)   { if (i) s += ','; s += '"'; s += matFxName(i);   s += '"'; }
     s += "],\"oled\":[";
     for (uint8_t i = 0; i < N_OANIM; i++)    { if (i) s += ','; s += '"'; s += OANIM_NAMES[i]; s += '"'; }
     s += "],\"alias\":[";

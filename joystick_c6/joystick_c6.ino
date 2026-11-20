@@ -1,6 +1,10 @@
 /*
- * Wireless joystick board v3.1 (Waveshare ESP32-C6-Zero) -> ESP-NOW -> MacroPad main board
+ * Wireless joystick board v3.2 (Waveshare ESP32-C6-Zero) -> ESP-NOW -> MacroPad main board
  * Needs main board (ESP32-S3) code v4.7 or newer (v4.9 for the stopwatch, v5.3 for updates over the air).
+ *
+ * NEW in v3.2: 118 more effects copied from WLED (https://github.com/wled/WLED, EUPL-1.2, see LICENSE in the repository).
+ *  They sit between "song progress" and "off" in the effect list (names start with W:). Music reactive ones are left out.
+ *  Needs the pad code v6.4 or newer to show their names on the pad's OLED and in its setup page.
  *
  * NEW in v3.1: first update sent through the pad (a test that the update path works). The version shows in the
  *  pad's setup page and on its OLED after the update. Nothing else changes.
@@ -74,8 +78,11 @@
 #include <Preferences.h>
 #include <FastLED.h>
 #include <Update.h>
+#include "WledCore.h"      // WLED effects (EUPL-1.2, see LICENSE): strip effects copied from WLED v16.0.1
+#include "WledFx1D.h"
+#include "WledUndef.h"
 
-constexpr const char* FW_VERSION = "3.1";              // sent to the pad (shown in its setup page)
+constexpr const char* FW_VERSION = "3.2";              // sent to the pad (shown in its setup page)
 
 // ---- joystick
 constexpr uint8_t PIN_X      = 0;    // stick X (analog)
@@ -176,7 +183,8 @@ enum { E_SOLID, E_BLINK, E_BREATHE, E_WIPE, E_WIPERANDOM, E_RANDOMCOLORS, E_SWEE
        E_COMET, E_FIREWORKS, E_RAIN, E_FIRE2012, E_FIREFLICKER, E_CANDLE, E_COLORTWINKLE, E_METEOR, E_JUGGLE, E_BPM,
        E_PRIDE, E_PALETTE, E_LAKE, E_RIPPLE, E_PLASMA, E_LIGHTNING, E_GRADIENT, E_HEARTBEAT, E_NOISE, E_AURORA,
        E_ANDROID, E_BOUNCING, E_SINELON, E_POPCORN, E_LARSON, E_POLICE, E_TRIWIPE, E_CONFETTI,
-       E_JOY, E_TILT, E_METER, E_WARP, E_CLICKBURST, E_LAVA, E_OCEAN, E_TWINCOMETS, E_SONG, E_OFF };
+       E_JOY, E_TILT, E_METER, E_WARP, E_CLICKBURST, E_LAVA, E_OCEAN, E_TWINCOMETS, E_SONG,
+       E_WLED, E_OFF = E_WLED + wfx::WFX1D_N };   // E_WLED.. = effects copied from WLED
 
 static const char* const FX_NAMES[] = {
   "solid","blink","breathe","wipe","wipe random","random colors","sweep","dynamic","colorloop","rainbow",
@@ -185,9 +193,13 @@ static const char* const FX_NAMES[] = {
   "comet","fireworks","rain","fire 2012","fire flicker","candle","colortwinkle","meteor","juggle","bpm",
   "pride","palette","lake","ripple","plasma","lightning","gradient","heartbeat","noise","aurora",
   "android","bouncing balls","sinelon","popcorn","larson scanner","police","tri wipe","confetti",
-  "joystick","tilt color","push meter","warp","click burst","lava lamp","ocean","twin comets","song progress","off"};
-constexpr uint8_t N_FX = sizeof(FX_NAMES) / sizeof(FX_NAMES[0]);
-static_assert(N_FX == E_OFF + 1, "effect names and enum do not match");
+  "joystick","tilt color","push meter","warp","click burst","lava lamp","ocean","twin comets","song progress"};   // then the WLED effects (names start with W:), then "off"
+constexpr uint8_t N_FX = E_OFF + 1;
+static_assert(sizeof(FX_NAMES) / sizeof(FX_NAMES[0]) == E_WLED, "effect names and enum do not match");
+static char wledName[wfx::WFX1D_N][24];                     // "W:" + WLED's own name
+static struct WledNameInit { WledNameInit() { for (uint8_t i = 0; i < wfx::WFX1D_N; i++) snprintf(wledName[i], sizeof wledName[i], "W:%s", wfx::WFX1D[i].name); } } wledNameInit;
+static const char* fxName(uint8_t i) { return i < E_WLED ? FX_NAMES[i] : i < E_OFF ? wledName[i - E_WLED] : "off"; }
+static inline bool isWledFx(uint8_t fx) { return fx >= E_WLED && fx < E_OFF; }
 
 static CRGB leds[MAX_LEDS];
 static CRGB onboard[1];
@@ -221,6 +233,7 @@ static void resetFx() {
   for (auto& k : kon) k = false;
   for (uint8_t i = 0; i < 8; i++) wpos[i] = random16(1000) / 1000.0f;
   rt0 = 0;
+  if (isWledFx(curFx)) wfx::wfxSelect(0, wfx::WFX1D[curFx - E_WLED]); else wfx::gSegs[0].resetRuntime();
 }
 
 // beat helper: returns lo..hi, 'bpm' cycles per minute, driven by the effect clock
@@ -665,7 +678,10 @@ static void runFx(uint8_t fx) {
       if (pl) { uint16_t hd = (uint16_t)f; if (hd > n - 1) hd = n - 1; leds[hd] += CHSV(sh, 60, tb(t, 40, 40, 160)); }   // the head glows
     } break;
 
-    default: fill_solid(leds, n, blk); break;
+    default:
+      if (isWledFx(fx)) wfx::wfxFrame(0, wfx::WFX1D[fx - E_WLED], leds, n, 0, 0, nullptr, SPEED, HUE, millis());
+      else fill_solid(leds, n, blk);
+      break;
   }
 }
 
@@ -746,7 +762,7 @@ static void changeFx(int d) {
   curFx = (uint8_t)((curFx + N_FX + d) % N_FX);
   resetFx();
   fxDirty = true; fxChangedMs = millis();
-  Serial.printf("Effect %d/%d: %s\n", curFx + 1, N_FX, FX_NAMES[curFx]);
+  Serial.printf("Effect %d/%d: %s\n", curFx + 1, N_FX, fxName(curFx));
 }
 
 static void fxButtonTick() {
@@ -916,7 +932,7 @@ static void applySettings(const PadPkt& p) {
   prefs.putUShort("ma", maxMa);    prefs.putUChar("sl", p.sleepMin); prefs.putUChar("hue", HUE);
   prefs.putUChar("sp", SPEED);     prefs.putUChar("gest", gest);   prefs.putUShort("cfg", cfgId);
   Serial.printf("Settings from the pad: %u LEDs, brightness %u, effect %s, sleep %u min\n",
-                nLeds, maxBright, FX_NAMES[curFx], p.sleepMin);
+                nLeds, maxBright, fxName(curFx), p.sleepMin);
 }
 
 static void padTick() {
@@ -1137,7 +1153,7 @@ void setup() {
   } else {
     Serial.println("ESP-NOW init failed");
   }
-  Serial.printf("Effect %d/%d: %s  |  %s\n", curFx + 1, N_FX, FX_NAMES[curFx], padKnown ? "pad known" : "looking for a pad");
+  Serial.printf("Effect %d/%d: %s  |  %s\n", curFx + 1, N_FX, fxName(curFx), padKnown ? "pad known" : "looking for a pad");
   markUsed();
   helloUntil = millis() + 5000;
 }

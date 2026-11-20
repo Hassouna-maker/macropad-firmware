@@ -20,3 +20,15 @@ void loop()  { padOtaLoop(); }
 ```
 
 Upload it once by USB. From then on the pad lists the board and sends it new code by radio. See the notes at the top of `PadOTA.h`.
+
+## WLED effects
+The pad (v6.4) and the stick (v3.2) contain light effects copied from [WLED](https://github.com/wled/WLED) v16.0.1
+(118 for the strip and the stick, 30 for the matrix; their names start with `W:`). Music reactive effects are left out.
+WLED is licensed under the EUPL v. 1.2, so this repository is too: see `LICENSE` and `NOTICE`.
+
+The files `Wled*.h` in `macropad_s3/` and `joystick_c6/` are generated. To rebuild them from another WLED version:
+
+```
+git clone --depth 1 --branch v16.0.1 https://github.com/wled/wled
+python3 tools/gen_wled.py wled/wled00 out/
+```

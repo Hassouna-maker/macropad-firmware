@@ -1,0 +1,36 @@
+  void blur2D(uint8_t blur_x, uint8_t blur_y, bool smear = false) const {
+    if (!target) return;
+    const unsigned cols = vWidth(), rows = vHeight();
+    if (blur_x) {
+      const uint8_t keepx = smear ? 255 : 255 - blur_x, seepx = blur_x >> 1;
+      for (unsigned row = 0; row < rows; row++) {
+        uint32_t cur = getPixelColorXY(0, row), carryover = fast_color_scale(cur, seepx);
+        setPixelColorXY(0, (int)row, fast_color_scale(cur, keepx));
+        for (unsigned x = 1; x < cols; x++) {
+          cur = getPixelColorXY(x, row);
+          uint32_t part = fast_color_scale(cur, seepx);
+          cur = fast_color_scale(cur, keepx);
+          cur = color_add(cur, carryover);
+          setPixelColorXY((int)x - 1, (int)row, color_add(getPixelColorXY(x - 1, row), part));
+          setPixelColorXY((int)x, (int)row, cur);
+          carryover = part;
+        }
+      }
+    }
+    if (blur_y) {
+      const uint8_t keepy = smear ? 255 : 255 - blur_y, seepy = blur_y >> 1;
+      for (unsigned col = 0; col < cols; col++) {
+        uint32_t cur = getPixelColorXY(col, 0), carryover = fast_color_scale(cur, seepy);
+        setPixelColorXY((int)col, 0, fast_color_scale(cur, keepy));
+        for (unsigned y = 1; y < rows; y++) {
+          cur = getPixelColorXY(col, y);
+          uint32_t part = fast_color_scale(cur, seepy);
+          cur = fast_color_scale(cur, keepy);
+          cur = color_add(cur, carryover);
+          setPixelColorXY((int)col, (int)y - 1, color_add(getPixelColorXY(col, y - 1), part));
+          setPixelColorXY((int)col, (int)y, cur);
+          carryover = part;
+        }
+      }
+    }
+  }
