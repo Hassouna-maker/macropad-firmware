@@ -7,8 +7,9 @@ struct ArForm;
 struct TextLine;
 
 /*
- * ESP32-S3 Wireless Macro Pad v6.7  (Arduino IDE / arduino-esp32 core 3.x)
+ * ESP32-S3 Wireless Macro Pad v6.8  (Arduino IDE / arduino-esp32 core 3.x)
  *
+ * NEW in v6.8: the Clock card shows what night mode is doing right now (clock set? hour? dimming?).
  * NEW in v6.7: night mode dims much more visibly (the % now follows how the eye sees brightness; also on the stick).
  * NEW in v6.6: key flash is now fully white (was tinted by the effect); slower scroll mode on the stick; night mode retries the clock every 10 min if it was not set.
  * NEW in v6.5: favourite effects. Tick them in the setup page and the strip, matrix and stick effect buttons cycle only through those.
@@ -489,7 +490,7 @@ static volatile bool     swMode = false;                  // the timer button wo
 static volatile uint8_t  swState = SW_IDLE;
 static volatile uint32_t swStartAt = 0, swAccum = 0;      // elapsed = swAccum (+ time since swStartAt while running)
 static uint32_t swElapsed() { return swState == SW_RUN ? swAccum + (millis() - swStartAt) : swAccum; }
-constexpr const char* FW_VERSION = "6.7";
+constexpr const char* FW_VERSION = "6.8";
 static volatile bool sotaBusy = false;                    // sending a firmware file to the stick right now
 static bool sleepAllowed() { return timerState == T_IDLE && swState == SW_IDLE && !sotaBusy; }   // never sleep with a timer / stopwatch / stick update going
 
@@ -4785,7 +4786,7 @@ function render(){
   <div class=card><h3>Clock</h3>${sel('Show the time on the OLED','clock.on',K.on,[[1,'Yes'],[0,'No']],1)}${sel('Format','clock.h24',K.h24,[[1,'24 hour'],[0,'12 hour (AM / PM)']],1)}
   ${fld('Home Wi-Fi name','clock.ssid',K.ssid,0,'maxlength=32 autocapitalize=off autocorrect=off')}${fld('Home Wi-Fi password','clock.pass',K.pass,0,'type=password maxlength=64 placeholder="'+(K.passSet?'saved - leave empty to keep it':'')+'"')}
   ${fld('Timezone (pick from the list or type your own)','clock.tz',K.tz,0,'list=tzl maxlength=47 autocapitalize=off autocorrect=off')}
-  ${sel('Night mode (LEDs dim at night)','clock.night',K.night,[[0,'Off'],[1,'On']],1)}${sel('Night starts at','clock.nfrom',K.nfrom,[...Array(24).keys()].map(h=>[h,(h<10?'0':'')+h+':00']),1)}${sel('Night ends at','clock.nto',K.nto,[...Array(24).keys()].map(h=>[h,(h<10?'0':'')+h+':00']),1)}${fld('Night brightness % (1-100)','clock.nlvl',K.nlvl,1)}
+  ${sel('Night mode (LEDs dim at night)','clock.night',K.night,[[0,'Off'],[1,'On']],1)}${sel('Night starts at','clock.nfrom',K.nfrom,[...Array(24).keys()].map(h=>[h,(h<10?'0':'')+h+':00']),1)}${sel('Night ends at','clock.nto',K.nto,[...Array(24).keys()].map(h=>[h,(h<10?'0':'')+h+':00']),1)}${fld('Night brightness % (1-100)','clock.nlvl',K.nlvl,1)}<small>Right now (saved settings): ${STICK.tv?('clock '+STICK.hr+':00'):'clock NOT set'}, night mode ${STICK.nm?'on':'off'}, LEDs ${STICK.night<255?'dimmed to '+Math.round(STICK.night/2.55)+' % of the power':'NOT dimmed by night mode'}.</small>
   <small>Night mode dims the strip, the matrix and the stick's strip. It needs the time, so the Wi-Fi above must be set (it also works when the clock is not shown).</small><datalist id=tzl>${TZ.map(z=>`<option value="${z[1]}">${z[0]}</option>`).join('')}</datalist>
   <small>Only used when Main screen is Clock. The pad joins this Wi-Fi for a few seconds to get the time (at most once an hour), then turns Wi-Fi off again. It must be a 2.4 GHz network (the ESP32 can't use 5 GHz). In config mode the pad also joins it, so you can open the setup page at http://macropad.local from any device on that Wi-Fi. If it can't connect within 30 s, the OLED shows UNABLE TO CONNECT and it tries again 15 min later.</small></div>`;
   cfg.components.forEach((c,i)=>{
@@ -5144,7 +5145,8 @@ static void startConfigPortal() {
   server.on("/api/stick", HTTP_GET, []() {
     char b[48] = "";
     if (stickPaired) snprintf(b, sizeof b, "%02X:%02X:%02X:%02X:%02X:%02X", stickMac[0], stickMac[1], stickMac[2], stickMac[3], stickMac[4], stickMac[5]);
-    server.send(200, "application/json", String("{\"mac\":\"") + b + "\"}");
+    time_t tt = time(nullptr); struct tm lt; localtime_r(&tt, &lt);
+    server.send(200, "application/json", String("{\"mac\":\"") + b + "\",\"night\":" + (int)nightNow + ",\"nm\":" + (cCfg.night ? 1 : 0) + ",\"tv\":" + (timeValid() ? 1 : 0) + ",\"hr\":" + lt.tm_hour + "}");
   });
   server.on("/api/forgetstick", HTTP_POST, []() {
     prefs.remove("stickmac"); stickPaired = false;
