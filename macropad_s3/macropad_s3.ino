@@ -7,8 +7,9 @@ struct ArForm;
 struct TextLine;
 
 /*
- * ESP32-S3 Wireless Macro Pad v6.8  (Arduino IDE / arduino-esp32 core 3.x)
+ * ESP32-S3 Wireless Macro Pad v6.9  (Arduino IDE / arduino-esp32 core 3.x)
  *
+ * NEW in v6.9: GIFs on the matrix. Upload up to 8 in the setup page ("GIFs on the matrix" card); each shows up in the matrix effect list as "GIF: name".
  * NEW in v6.8: the Clock card shows what night mode is doing right now (clock set? hour? dimming?).
  * NEW in v6.7: night mode dims much more visibly (the % now follows how the eye sees brightness; also on the stick).
  * NEW in v6.6: key flash is now fully white (was tinted by the effect); slower scroll mode on the stick; night mode retries the clock every 10 min if it was not set.
@@ -398,7 +399,9 @@ enum { MF_PLASMA, MF_PSFIRE, MF_FIRE, MF_RAIN, MF_WAVES, MF_LAVA, MF_RIPPLES, MF
        MF_SNAKE, MF_PONG, MF_BREAKOUT, MF_DODGE, MF_TETRIS, MF_FLAPPY, MF_INVADERS,
        MF_WLED, MF_OFF = MF_WLED + wfx::WFX2D_N };   // MF_WLED.. = effects copied from WLED
 static bool isGameFx(uint8_t fx) { return fx >= MF_SNAKE && fx <= MF_INVADERS; }
-constexpr uint8_t N_MAT_FX = MF_OFF + 1;
+constexpr uint8_t N_GIF = 8;                            // GIFs uploaded in the setup page (kept on the flash), shown on the matrix
+constexpr uint8_t MF_GIF0 = MF_OFF + 1;                 // after "off", so saved effect numbers keep their meaning
+constexpr uint8_t N_MAT_FX = MF_GIF0 + N_GIF;
 static_assert(sizeof(MAT_FX) / sizeof(MAT_FX[0]) == MF_WLED, "matrix effect names and enum do not match");
 
 // names of the WLED effects: "W:" + WLED's own name (so they never clash with the pad's own effects)
@@ -410,9 +413,11 @@ static struct WledNameInit {
   }
 } wledNameInit;
 static const char* stripFxName(uint8_t i) { return i < SF_WLED ? STRIP_FX[i] : i < SF_OFF ? wledStripName[i - SF_WLED] : "off"; }
-static const char* matFxName(uint8_t i)   { return i < MF_WLED ? MAT_FX[i]   : i < MF_OFF ? wledMatName[i - MF_WLED]   : "off"; }
+static char gifName[N_GIF][24];                          // "GIF: name" (or "GIF 3 (empty)"), the names live in prefs gn0..gn7
+static const char* matFxName(uint8_t i)   { return i < MF_WLED ? MAT_FX[i]   : i < MF_OFF ? wledMatName[i - MF_WLED]   : i == MF_OFF ? "off" : gifName[(i - MF_GIF0) % N_GIF]; }
 static inline bool isWledStrip(uint8_t fx) { return fx >= SF_WLED && fx < SF_OFF; }
 static inline bool isWledMat(uint8_t fx)   { return fx >= MF_WLED && fx < MF_OFF; }
+static inline bool isGifMat(uint8_t fx)    { return fx >= MF_GIF0 && fx < MF_GIF0 + N_GIF; }
 
 // ---- favourite effects (ticked in the setup page): the effect buttons step only through the ticked ones.
 // Nothing ticked = all effects. Saved at once (not with "Save & Restart"). One bit per effect.
@@ -452,6 +457,15 @@ static int8_t parseHome(const String& h) {
 
 // ============================ Globals ============================
 static Preferences prefs;
+static void gifNamesLoad() {
+  for (uint8_t i = 0; i < N_GIF; i++) {
+    char k[5]; snprintf(k, sizeof k, "gn%d", i);
+    String n = prefs.getString(k, "");
+    if (n.length()) snprintf(gifName[i], sizeof gifName[i], "GIF: %s", n.c_str());
+    else snprintf(gifName[i], sizeof gifName[i], "GIF %d (empty)", i + 1);
+  }
+}
+
 static WebServer   server(80);
 static DNSServer   dns;
 static bool        cfgMode = false;
@@ -490,7 +504,7 @@ static volatile bool     swMode = false;                  // the timer button wo
 static volatile uint8_t  swState = SW_IDLE;
 static volatile uint32_t swStartAt = 0, swAccum = 0;      // elapsed = swAccum (+ time since swStartAt while running)
 static uint32_t swElapsed() { return swState == SW_RUN ? swAccum + (millis() - swStartAt) : swAccum; }
-constexpr const char* FW_VERSION = "6.8";
+constexpr const char* FW_VERSION = "6.9";
 static volatile bool sotaBusy = false;                    // sending a firmware file to the stick right now
 static bool sleepAllowed() { return timerState == T_IDLE && swState == SW_IDLE && !sotaBusy; }   // never sleep with a timer / stopwatch / stick update going
 
@@ -1984,6 +1998,44 @@ static uint16_t XY(int x, int y) {
 }
 #define FOR_XY for (uint8_t y = 0; y < H; y++) for (uint8_t x = 0; x < W; x++)
 
+// ---- GIF player. File /gifN.bin: 'G' 'F' w h framesLo framesHi, then per frame: delay ms (2 bytes) + w*h*3 RGB bytes.
+static uint8_t* gifBuf = nullptr; static int8_t gifSlot = -1; static uint8_t gifW = 0, gifH = 0; static uint16_t gifN = 0;
+static uint32_t gifTotal = 0; static volatile uint32_t gifGen = 1, gifSeen = 0;
+static void gifLoad(uint8_t slot) {
+  if (gifBuf) { free(gifBuf); gifBuf = nullptr; }
+  gifSlot = slot; gifSeen = gifGen; gifN = 0;
+  if (!ffatOk) ffatOk = FFat.begin(false);
+  if (!ffatOk) return;
+  char path[16]; snprintf(path, sizeof path, "/gif%d.bin", slot);
+  File f = FFat.open(path, FILE_READ);
+  if (!f) return;
+  const size_t sz = f.size();
+  if (sz < 6 || sz > 130000) { f.close(); return; }
+  uint8_t* b = (uint8_t*)ps_malloc(sz); if (!b) b = (uint8_t*)malloc(sz);
+  if (!b) { f.close(); return; }
+  const size_t got = f.read(b, sz); f.close();
+  const uint8_t w = b[2], h = b[3]; const uint16_t n = b[4] | (b[5] << 8);
+  if (got != sz || b[0] != 'G' || b[1] != 'F' || !w || !h || !n || sz != 6 + (size_t)n * (2 + w * h * 3)) { free(b); return; }
+  gifBuf = b; gifW = w; gifH = h; gifN = n; gifTotal = 0;
+  size_t o = 6; for (uint16_t i = 0; i < n; i++) { gifTotal += max<uint16_t>(20, b[o] | (b[o + 1] << 8)); o += 2 + w * h * 3; }
+}
+static void gifDraw(uint8_t slot, uint8_t W, uint8_t H, uint32_t t) {
+  if (gifSlot != (int8_t)slot || gifSeen != gifGen) gifLoad(slot);
+  if (!gifBuf || !gifN) { fill_solid(mBuf, (uint16_t)W * H, CHSV(0, 0, 25)); return; }     // empty slot: dim grey
+  uint32_t pos = t % gifTotal; size_t o = 6; uint16_t fr = 0;
+  for (; fr < gifN; fr++) {
+    const uint16_t d = max<uint16_t>(20, gifBuf[o] | (gifBuf[o + 1] << 8));
+    if (pos < d) break;
+    pos -= d; o += 2 + (size_t)gifW * gifH * 3;
+  }
+  if (fr >= gifN) o = 6;
+  const uint8_t* px = gifBuf + o + 2;
+  for (uint8_t y = 0; y < H; y++) for (uint8_t x = 0; x < W; x++) {
+    const uint8_t* c = px + ((size_t)(y * gifH / H) * gifW + (x * gifW / W)) * 3;
+    mBuf[XY(x, y)] = CRGB(c[0], c[1], c[2]);
+  }
+}
+
 // angle of (dx,dy) mapped to 0..255
 static inline uint8_t ang8(float dy, float dx) {
   return (uint8_t)(((int)((atan2f(dy, dx) + PI) * 40.584f)) & 0xFF);
@@ -3163,6 +3215,7 @@ static void matFx(uint8_t fx, uint8_t W, uint8_t H, uint16_t N) {
     case MF_INVADERS: gameInvaders(W, H, N); break;
     default:
       if (isWledMat(fx)) wfx::wfxFrame(1, wfx::WFX2D[fx - MF_WLED], mBuf, N, W, H, XY, mCfg.speed, mCfg.hue, millis());
+      else if (isGifMat(fx)) gifDraw(fx - MF_GIF0, W, H, (uint32_t)((uint64_t)t * 8 / 9));   // t runs at (speed+16)/128, a GIF should play at its own speed at the default
       else fill_solid(mBuf, N, CRGB::Black);
       break;
   }
@@ -4560,6 +4613,7 @@ static void applyConfig(JsonDocument& d) {
   matGameSpeed = constrain((int)(m["gspeed"] | 3), 1, 10);
   matTextSpeed = constrain((int)(m["tspeed"] | 3), 1, 10);
   matOn = mCfg.w > 0 && mCfg.h > 0;
+  gifNamesLoad();
   curMFx = findFx(matFxName, N_MAT_FX, String(m["fx"] | "plasma"));
 
   JsonObject o = d["oled"];
@@ -4746,6 +4800,127 @@ function favBox(k,title,names){const n=names.length;
   <small>Tick the ones the button should step through (nothing ticked = all of them). Tap a name to see it on the LEDs now.</small>
   <button type=button onclick="favClear('${k}')">Untick all</button>
   ${names.map((nm,i)=>`<div class=fv><input type=checkbox style="width:auto" ${fbit(FAVS[k],i)?'checked':''} onchange="favTick('${k}',${i},this.checked,${n})"><a onclick="favPv('${k}',${i})">${esc(nm)}</a></div>`).join('')}</details>`}
+function gxLzw(minCode,data,total){
+  const clear=1<<minCode,eoi=clear+1;let size=minCode+1,next=eoi+1,mask=(1<<size)-1;
+  const prefix=new Int16Array(4096),suffix=new Uint8Array(4096),stack=new Uint8Array(4097);
+  const out=new Uint8Array(total);let o=0,bits=0,nb=0,di=0,old=-1,first=0;
+  for(let i=0;i<clear;i++)suffix[i]=i;
+  while(o<total){
+    while(nb<size&&di<data.length){bits|=data[di++]<<nb;nb+=8}
+    if(nb<size)break;
+    let code=bits&mask;bits>>=size;nb-=size;
+    if(code===clear){size=minCode+1;next=eoi+1;mask=(1<<size)-1;old=-1;continue}
+    if(code===eoi)break;
+    if(old===-1){out[o++]=suffix[code];old=code;first=code;continue}
+    const inc=code;let sp=0;
+    if(code>=next){stack[sp++]=first;code=old}
+    while(code>=clear){stack[sp++]=suffix[code];code=prefix[code]}
+    first=suffix[code];stack[sp++]=first;
+    if(next<4096){prefix[next]=old;suffix[next]=first;next++;if((next&mask)===0&&next<4096){size++;mask=(1<<size)-1}}
+    old=inc;
+    while(sp>0&&o<total)out[o++]=stack[--sp];
+  }
+  return out;
+}
+function gxDecode(u8){
+  let p=0;const rd=()=>u8[p++],r16=()=>{const v=u8[p]|(u8[p+1]<<8);p+=2;return v};
+  if(u8.length<13||String.fromCharCode(u8[0],u8[1],u8[2])!=='GIF')throw new Error('This is not a GIF file');
+  p=6;const W=r16(),H=r16(),fl=rd();rd();rd();
+  let gct=null;if(fl&128){const n=2<<(fl&7);gct=u8.subarray(p,p+n*3);p+=n*3}
+  const frames=[],cv=new Uint8ClampedArray(W*H*4);let delay=100,tr=-1,disp=0;
+  while(p<u8.length){
+    const b=rd();
+    if(b===0x21){
+      const lab=rd();
+      if(lab===0xF9){rd();const f=rd();delay=r16()*10;const ti=rd();tr=(f&1)?ti:-1;disp=(f>>2)&7;rd()}
+      else{let s;while((s=rd()))p+=s}
+    }else if(b===0x2C){
+      const x0=r16(),y0=r16(),w=r16(),h=r16(),f=rd();
+      let ct=gct;if(f&128){const n=2<<(f&7);ct=u8.subarray(p,p+n*3);p+=n*3}
+      if(!ct)throw new Error('GIF has no colours');
+      const mc=rd(),parts=[];let s,tot=0;
+      while((s=rd())){parts.push(u8.subarray(p,p+s));p+=s;tot+=s}
+      const data=new Uint8Array(tot);let q=0;for(const a of parts){data.set(a,q);q+=a.length}
+      const idx=gxLzw(mc,data,w*h);
+      const prev=disp===3?cv.slice():null;
+      const rows=[];
+      if(f&64){for(const [st,sp] of [[0,8],[4,8],[2,4],[1,2]])for(let y=st;y<h;y+=sp)rows.push(y)}else for(let y=0;y<h;y++)rows.push(y);
+      for(let r=0;r<h;r++){
+        const y=rows[r]+y0;if(y>=H)continue;
+        for(let x=0;x<w;x++){
+          const xx=x+x0;if(xx>=W)continue;
+          const c=idx[r*w+x];if(c===tr)continue;
+          const o=(y*W+xx)*4;cv[o]=ct[c*3];cv[o+1]=ct[c*3+1];cv[o+2]=ct[c*3+2];cv[o+3]=255;
+        }
+      }
+      frames.push({rgba:cv.slice(),delay:delay<20?100:delay});
+      if(disp===2){for(let y=y0;y<Math.min(H,y0+h);y++)for(let x=x0;x<Math.min(W,x0+w);x++){const o=(y*W+x)*4;cv[o]=cv[o+1]=cv[o+2]=cv[o+3]=0}}
+      else if(disp===3&&prev)cv.set(prev);
+      delay=100;tr=-1;disp=0;
+    }else if(b===0x3B)break;
+    else if(b===undefined)break;
+  }
+  if(!frames.length)throw new Error('No pictures found in this GIF');
+  return {W,H,frames};
+}
+function gxPack(g,w,h){
+  const sc=Math.min(w/g.W,h/g.H),dw=Math.max(1,Math.round(g.W*sc)),dh=Math.max(1,Math.round(g.H*sc));
+  const ox=Math.floor((w-dw)/2),oy=Math.floor((h-dh)/2),per=2+w*h*3;
+  const maxF=Math.max(1,Math.min(64,Math.floor(100000/per)));
+  let fr=g.frames;
+  if(fr.length>maxF){const out=[];for(let i=0;i<maxF;i++){const a=Math.floor(i*fr.length/maxF),b=Math.floor((i+1)*fr.length/maxF);let d=0;for(let k=a;k<b;k++)d+=fr[k].delay;out.push({rgba:fr[a].rgba,delay:d})}fr=out}
+  const buf=new Uint8Array(6+fr.length*per);buf[0]=71;buf[1]=70;buf[2]=w;buf[3]=h;buf[4]=fr.length&255;buf[5]=fr.length>>8;
+  let o=6;
+  for(const f of fr){
+    const d=Math.min(65535,Math.max(20,f.delay));buf[o++]=d&255;buf[o++]=d>>8;
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      let r=0,gr=0,bl=0;
+      if(x>=ox&&x<ox+dw&&y>=oy&&y<oy+dh){
+        const x0=Math.floor((x-ox)*g.W/dw),x1=Math.max(x0+1,Math.floor((x-ox+1)*g.W/dw));
+        const y0=Math.floor((y-oy)*g.H/dh),y1=Math.max(y0+1,Math.floor((y-oy+1)*g.H/dh));
+        let n=0;
+        for(let yy=y0;yy<y1;yy++)for(let xx=x0;xx<x1;xx++){const q=(yy*g.W+xx)*4;r+=f.rgba[q];gr+=f.rgba[q+1];bl+=f.rgba[q+2];n++}
+        r=Math.round(r/n);gr=Math.round(gr/n);bl=Math.round(bl/n);
+      }
+      buf[o++]=r;buf[o++]=gr;buf[o++]=bl;
+    }
+  }
+  return buf;
+}
+
+let GIFS=[],GXMSG='';
+function gifCard(){
+  const used=new Set(GIFS.map(g=>g.i));
+  const opts=[...Array(8).keys()].map(i=>{const g=GIFS.find(q=>q.i==i);return `<option value=${i}>${i+1} ${g?'(replace '+esc(g.name)+')':'(empty)'}</option>`}).join('');
+  return `<div class=card><h3>GIFs on the matrix</h3>
+  <small>Pick a GIF from your device. It is shrunk to your matrix size (${(cfg.matrix&&cfg.matrix.w)||8} x ${(cfg.matrix&&cfg.matrix.h)||8}) and kept on the pad. Each one shows up in the matrix Effect lists as "GIF: name", so you can tick it as a favourite. Small pixel-art GIFs look best. Up to 8 GIFs, 64 frames each.</small>
+  <input type=file id=gx_f accept="image/gif">
+  <label>Keep it in slot</label><select id=gx_s>${opts}</select>
+  <label>Name (max 14 letters)</label><input id=gx_n maxlength=14>
+  <button type=button onclick="gxUp()">Upload GIF</button> <small id=gx_m>${esc(GXMSG)}</small>
+  ${GIFS.map(g=>`<div class=fv><a onclick="favPv('m',${FX.matrix.length-8+g.i})">${esc(g.name)}</a><small>${g.w}x${g.h}, ${g.n} frames</small><button type=button onclick="gxDel(${g.i})">Delete</button></div>`).join('')}</div>`}
+async function gxRefresh(){
+  const [f,g,fv]=await Promise.all([fetch('/api/fx').then(r=>r.json()),fetch('/api/gifs').then(r=>r.json()),fetch('/api/favs').then(r=>r.json())]);
+  FX=f;GIFS=g;FAVS=Object.assign({s:"",m:"",k:""},fv);render()}
+async function gxUp(){
+  const el=id=>document.getElementById(id),m=el('gx_m'),f=el('gx_f').files[0];
+  if(!f){m.textContent='Pick a GIF file first';return}
+  const i=Number(el('gx_s').value);
+  const nm=(el('gx_n').value||f.name.replace(/\.[^.]*$/,'')).slice(0,14);
+  try{
+    m.textContent='Reading...';
+    const g=gxDecode(new Uint8Array(await f.arrayBuffer()));
+    const bin=gxPack(g,(cfg.matrix&&cfg.matrix.w)||8,(cfg.matrix&&cfg.matrix.h)||8);
+    m.textContent='Uploading...';
+    const fd=new FormData();fd.append('gif',new Blob([bin]),'gif.bin');
+    const r=await fetch('/api/gifup?i='+i+'&name='+encodeURIComponent(nm),{method:'POST',body:fd});
+    if(!r.ok)throw new Error(await r.text());
+    GXMSG='Done: "GIF: '+nm+'" is now in the matrix effect list.';
+    await gxRefresh();favPv('m',FX.matrix.length-8+i)
+  }catch(e){m.textContent='Failed: '+(e.message||e)}}
+async function gxDel(i){
+  if(!confirm('Delete this GIF?'))return;
+  await fetch('/api/gifdel?i='+i,{method:'POST'});GXMSG='Deleted.';await gxRefresh()}
 function favCard(){return `<div class=card><h3>Favourite effects</h3>
   <small>The effect buttons (pad strip, pad matrix and the stick) only cycle through the effects you tick. Ticks are saved at once. Picking an effect here, or in the Effect lists below, shows it on the LEDs straight away.</small>
   ${favBox('s','Pad strip',FX.strip)}${favBox('m','Pad matrix',FX.matrix)}${favBox('k','Stick strip',SFXJ.slice(1).map(q=>q[1]))}</div>`}
@@ -4766,6 +4941,7 @@ function render(){
   Plain names (copy, paste, home, play, volup, click...) work on both iPad and PC by themselves.
   For a different action on the PC write both, separated by | , for example <b>key:gui+h | key:gui+d</b> (iPad | PC). Long press = hold 0.5 s, double tap = two presses within 0.3 s; leave them empty if not needed. A Mac counts as PC: choose Always iPad if you use a Mac.</small></div>
   ${favCard()}
+  ${gifCard()}
   <div class=card><h3>LED strip (max 256)</h3>${fld('LED count (1-256). Long strips: set the LED power limit above to what your power can give','led.count',L.count,1)}${fld('Brightness (5-255)','led.bright',L.bright,1)}
   ${fld('Colour / hue (0-255)','led.hue',L.hue,1)}${fld('Speed (0-255)','led.speed',L.speed,1)}${sel('Effect (start-up)','led.fx',L.fx,FX.strip)}
   <small>Button on GPIO 39: press = next effect, hold 0.7-3 s then release = previous, hold 3 s = off / on.</small></div>
@@ -4924,7 +5100,7 @@ function upFw(k){
   st.textContent='Uploading 0 % ...';x.send(fd);
 }
 async function forget(){await fetch('/api/forgetstick',{method:'POST'});STICK.mac='';render();}
-Promise.all([fetch('/api/config').then(r=>r.json()),fetch('/api/fx').then(r=>r.json()),fetch('/api/stick').then(r=>r.json()).catch(()=>({mac:''})),fetch('/api/ota').then(r=>r.json()).catch(()=>({})),fetch('/api/ctls').then(r=>r.json()).catch(()=>([])),fetch('/api/favs').then(r=>r.json()).catch(()=>({s:'',m:'',k:''}))]).then(([c,f,k,o,t,fv])=>{FX=f;STICK=k;OTA=o;CT=t;FAVS=Object.assign({s:"",m:"",k:""},fv);cfg=norm(c);render()});
+Promise.all([fetch('/api/config').then(r=>r.json()),fetch('/api/fx').then(r=>r.json()),fetch('/api/stick').then(r=>r.json()).catch(()=>({mac:''})),fetch('/api/ota').then(r=>r.json()).catch(()=>({})),fetch('/api/ctls').then(r=>r.json()).catch(()=>([])),fetch('/api/favs').then(r=>r.json()).catch(()=>({s:'',m:'',k:''})),fetch('/api/gifs').then(r=>r.json()).catch(()=>([]))]).then(([c,f,k,o,t,fv,gl])=>{FX=f;GIFS=gl;STICK=k;OTA=o;CT=t;FAVS=Object.assign({s:"",m:"",k:""},fv);cfg=norm(c);render()});
 </script></body></html>)HTML";
 
 static void restartInto(bool toConfig) {
@@ -5003,6 +5179,44 @@ static void otaStickUpload() {
     prefs.putUInt("sbsize", otaBytes); prefs.putUInt("sbcrc", otaCrcAcc); prefs.putUChar("sbpend", 1);
     prefs.putString("sbmsg", "");
     Serial.printf("Stick update saved: %lu bytes\n", (unsigned long)otaBytes);
+  }
+}
+
+// a GIF from the setup page (already shrunk to frames by the page): checked and kept as /gifN.bin
+static int gifUpIdx = -1; static String gifErr;
+static void gifUpload() {
+  HTTPUpload& u = server.upload();
+  if (u.status == UPLOAD_FILE_START) {
+    gifErr = ""; otaBytes = 0; gifUpIdx = server.arg("i").toInt();
+    if (gifUpIdx < 0 || gifUpIdx >= N_GIF) { gifErr = "Bad slot"; return; }
+    if (!ffatOk) { gifErr = "No room on the pad (flash not mounted)"; return; }
+    FFat.remove("/gif.tmp");
+    otaFile = FFat.open("/gif.tmp", FILE_WRITE);
+    if (!otaFile) gifErr = "Can't save the file on the pad";
+  } else if (u.status == UPLOAD_FILE_WRITE) {
+    if (gifErr.length()) return;
+    if (otaBytes + u.currentSize > 130000UL) { gifErr = "The GIF is too big"; return; }
+    if (otaFile.write(u.buf, u.currentSize) != u.currentSize) { gifErr = "Can't save the file on the pad (full?)"; return; }
+    otaBytes += u.currentSize;
+  } else if (u.status == UPLOAD_FILE_END || u.status == UPLOAD_FILE_ABORTED) {
+    if (otaFile) otaFile.close();
+    if (u.status == UPLOAD_FILE_ABORTED) gifErr = "Upload interrupted";
+    if (!gifErr.length()) {
+      File f = FFat.open("/gif.tmp", FILE_READ); uint8_t h[6] = {0};
+      if (f) { f.read(h, 6); f.close(); }
+      const uint16_t n = h[4] | (h[5] << 8);
+      if (h[0] != 'G' || h[1] != 'F' || !h[2] || !h[3] || !n || otaBytes != 6 + (size_t)n * (2 + h[2] * h[3] * 3)) gifErr = "This is not a valid GIF file for the pad";
+    }
+    if (gifErr.length()) { FFat.remove("/gif.tmp"); return; }
+    char path[16]; snprintf(path, sizeof path, "/gif%d.bin", gifUpIdx);
+    FFat.remove(path);
+    if (!FFat.rename("/gif.tmp", path)) { gifErr = "Can't save the file on the pad"; return; }
+    String nm = server.arg("name"); String clean;
+    for (size_t i = 0; i < nm.length() && clean.length() < 14; i++) { const char c = nm[i]; clean += (isalnum((unsigned char)c) || c == ' ' || c == '-' || c == '_') ? c : '_'; }
+    clean.trim(); if (!clean.length()) clean = "gif" + String(gifUpIdx + 1);
+    char k[5]; snprintf(k, sizeof k, "gn%d", gifUpIdx);
+    prefs.putString(k, clean);
+    gifNamesLoad(); gifGen++;
   }
 }
 
@@ -5189,6 +5403,31 @@ static void startConfigPortal() {
     }
     String o; serializeJson(d, o);
     server.send(200, "application/json", o);
+  });
+  server.on("/api/gifs", HTTP_GET, []() {                  // the GIFs kept on the pad
+    String s = "[";
+    for (uint8_t i = 0; i < N_GIF; i++) {
+      char k[5], path[16]; snprintf(k, sizeof k, "gn%d", i); snprintf(path, sizeof path, "/gif%d.bin", i);
+      const String n = prefs.getString(k, "");
+      if (!n.length() || !ffatOk) continue;
+      File f = FFat.open(path, FILE_READ); if (!f) continue;
+      uint8_t h[6] = {0}; f.read(h, 6); const size_t sz = f.size(); f.close();
+      if (s.length() > 1) s += ',';
+      s += "{\"i\":" + String(i) + ",\"name\":\"" + n + "\",\"w\":" + h[2] + ",\"h\":" + h[3] + ",\"n\":" + (h[4] | (h[5] << 8)) + ",\"b\":" + (unsigned)sz + "}";
+    }
+    server.send(200, "application/json", s + "]");
+  });
+  server.on("/api/gifup", HTTP_POST, []() {
+    if (gifErr.length()) { server.send(400, "text/plain", gifErr); return; }
+    server.send(200, "text/plain", "OK");
+  }, gifUpload);
+  server.on("/api/gifdel", HTTP_POST, []() {
+    const int i = server.arg("i").toInt();
+    if (i < 0 || i >= N_GIF) { server.send(400, "text/plain", "bad"); return; }
+    char k[5], path[16]; snprintf(k, sizeof k, "gn%d", i); snprintf(path, sizeof path, "/gif%d.bin", i);
+    if (ffatOk) FFat.remove(path);
+    prefs.remove(k); gifNamesLoad(); gifGen++;
+    server.send(200, "text/plain", "OK");
   });
   server.on("/api/ctl/file", HTTP_POST, []() {
     if (otaErr.length()) { server.send(400, "text/plain", otaErr); return; }
