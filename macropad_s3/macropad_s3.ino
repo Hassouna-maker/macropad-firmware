@@ -7,8 +7,11 @@ struct ArForm;
 struct TextLine;
 
 /*
- * ESP32-S3 Wireless Macro Pad v6.9  (Arduino IDE / arduino-esp32 core 3.x)
+ * ESP32-S3 Wireless Macro Pad v7.0  (Arduino IDE / arduino-esp32 core 3.x)
  *
+ * NEW in v7.0: long press and double tap also have a "with Fn held" version (buttons and encoder push-switch). The built-in strip/matrix effect buttons
+ *   (GPIO39/40) are gone: use normal buttons with led:next / led:prev / led:toggle (and mat:...), e.g. one key: press = led:next, double = led:prev,
+ *   long = led:toggle, and the same with Fn held for mat:... GPIO39/40 can be used as normal button pins.
  * NEW in v6.9: GIFs on the matrix. Upload up to 8 in the setup page ("GIFs on the matrix" card); each shows up in the matrix effect list as "GIF: name".
  * NEW in v6.8: the Clock card shows what night mode is doing right now (clock set? hour? dimming?).
  * NEW in v6.7: night mode dims much more visibly (the % now follows how the eye sees brightness; also on the stick).
@@ -253,7 +256,7 @@ struct TextLine;
  *  - LEDs (strip + matrix) dim after 1 minute without use, back to full brightness on any use.
  *  - Deep sleep after 5 minutes without use. The OLED shows a 10 s countdown before sleeping.
  *    Wake up = press the mode button (GPIO21) or any button / encoder push-switch / joystick button
- *    wired to GPIO 1-18. (GPIO39/40 effect buttons and encoder turning CANNOT wake the board.)
+ *    wired to GPIO 1-18. (GPIO39/40 and encoder turning CANNOT wake the board.)
  *    The press that wakes the board is ignored. Bluetooth reconnects by itself in 1-3 s.
  *  - Moving the wired or wireless joystick counts as use.
  *  - LED power switches (PIN_STRIP_PWR / PIN_MAT_PWR) cut LED power during sleep.
@@ -324,8 +327,6 @@ struct TextLine;
 
 // ============================ Fixed hardware pins ============================
 constexpr uint8_t  PIN_MODE_BTN  = 21;   // to GND, internal pull-up
-constexpr uint8_t  PIN_STRIP_BTN = 39;   // strip effect button (to GND)
-constexpr uint8_t  PIN_MAT_BTN   = 40;   // matrix effect button (to GND)
 constexpr uint8_t  PIN_STRIP     = 38;   // WS2812B strip data
 constexpr uint8_t  PIN_MATRIX    = 47;   // WS2812B matrix data
 constexpr int8_t   PIN_STRIP_PWR = 12;   // strip power switch (2N2222A base), HIGH = strip on. -1 = none
@@ -355,9 +356,9 @@ constexpr uint32_t WARN_MS        = 10000;                // OLED countdown befo
 #define ADD_MATRIX()  FastLED.addLeds<WS2812B, PIN_MATRIX, GRB>(mOut, mCfg.w * mCfg.h)
 
 // Pins the web UI may assign. Excluded: 0,3,45,46 (strapping), 19,20 (USB), 26-32 (flash/PSRAM),
-// 33-37 (octal PSRAM), 41,42 (OLED), 21 (mode btn), 38 (strip), 39/40 (effect btns), 47 (matrix),
+// 33-37 (octal PSRAM), 41,42 (OLED), 21 (mode btn), 38 (strip), 47 (matrix),
 // 43,44 (UART), 48 (RGB). PIN_STRIP_PWR / PIN_MAT_PWR are blocked too when they are set.
-static const uint8_t ALLOWED_PINS[] = {1,2,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18};
+static const uint8_t ALLOWED_PINS[] = {1,2,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,39,40};   // 39/40 were the built-in effect buttons: now normal pins (they cannot wake the board)
 
 static const char DEFAULT_JSON[] =
   "{\"name\":\"MacroPad\",\"power\":500,\"pmode\":0,\"pswap\":1,"
@@ -504,7 +505,7 @@ static volatile bool     swMode = false;                  // the timer button wo
 static volatile uint8_t  swState = SW_IDLE;
 static volatile uint32_t swStartAt = 0, swAccum = 0;      // elapsed = swAccum (+ time since swStartAt while running)
 static uint32_t swElapsed() { return swState == SW_RUN ? swAccum + (millis() - swStartAt) : swAccum; }
-constexpr const char* FW_VERSION = "6.9";
+constexpr const char* FW_VERSION = "7.0";
 static volatile bool sotaBusy = false;                    // sending a firmware file to the stick right now
 static bool sleepAllowed() { return timerState == T_IDLE && swState == SW_IDLE && !sotaBusy; }   // never sleep with a timer / stopwatch / stick update going
 
@@ -1110,33 +1111,6 @@ static void runAction(const Action& a) {
   triggerFlash();
 }
 
-// ============================ Built-in effect buttons (GPIO39 strip / GPIO40 matrix) ============================
-// Quick press = next effect. Hold 0.7-3 s and release = previous effect.
-// Keep holding for 3 s = turn that strip/matrix off (or back on). While off, a quick press turns it back on.
-struct FxBtn { uint8_t pin, nextAct, prevAct, offAct; bool stable, lastRaw; uint32_t lastChange, downAt; bool longDone; };
-static FxBtn fxBtns[2] = {
-  {PIN_STRIP_BTN, 1, 2, 7, HIGH, HIGH, 0, 0, false},
-  {PIN_MAT_BTN,   3, 4, 8, HIGH, HIGH, 0, 0, false}
-};
-static void fxButtonsTick() {
-  uint32_t now = millis();
-  for (auto& b : fxBtns) {
-    bool raw = digitalRead(b.pin);
-    if (raw != b.lastRaw) { b.lastRaw = raw; b.lastChange = now; }
-    if (now - b.lastChange > 25 && raw != b.stable) {
-      b.stable = raw;
-      markUsed();
-      if (raw == LOW) { b.downAt = now; b.longDone = false; }
-      else if (!b.longDone) {                                   // released
-        runLocal((now - b.downAt) < 700 ? b.nextAct : b.prevAct);
-        noteInput("effect"); triggerFlash();
-      }
-    }
-    if (b.stable == LOW && !b.longDone && now - b.downAt >= 3000) {   // 3 s hold = off / on
-      b.longDone = true; runLocal(b.offAct); noteInput("effect");
-    }
-  }
-}
 
 // ============================ Components ============================
 class Component {
@@ -1147,8 +1121,8 @@ public:
 };
 
 // picks the "with Fn held" action when the Fn button is held and that action is set
-static const Macro& pickFn(const Macro& normal, const Macro& withFn) {
-  return (fnDown && withFn.any()) ? withFn : normal;
+static const Macro& pickFn(const Macro& normal, const Macro& withFn, bool fn = fnDown > 0) {
+  return (fn && withFn.any()) ? withFn : normal;
 }
 
 // One macro for the iPad and one for the PC. "a | b" gives both; otherwise the same text is used for
@@ -1169,15 +1143,21 @@ static ActPair parsePair(const String& s) {
 // Button with optional long press (hold 0.5 s) and double tap (two presses within 0.3 s).
 // Without them it acts the moment it is pressed. With them, a single press acts when released
 // (or 0.3 s later if a double tap is set, to see if a second press comes).
+// Each of single / long / double can have its own "with Fn held" version (used when Fn was held as the press started).
 class Button : public Component {
   static constexpr uint32_t LONG_MS = 500, DOUBLE_MS = 300, REP_DELAY = 400, REP_MS = 100;
-  uint8_t pin; ActPair act, fnAct, longAct, dblAct; bool rep;
-  bool stable = HIGH, lastRaw = HIGH, longDone = false, pending = false;
+  uint8_t pin; ActPair act, fnAct, longAct, dblAct, fnLongAct, fnDblAct; bool rep;
+  bool stable = HIGH, lastRaw = HIGH, longDone = false, pending = false, fnAt = false, pendFn = false;
   uint32_t lastChange = 0, downAt = 0, pendingUntil = 0, lastRep = 0;
-  void single() { fire(pickFn(act.get(), fnAct.get())); }
+  void single(bool fn) { fire(pickFn(act.get(), fnAct.get(), fn)); }
+  bool hasLong(bool fn) const { return !(fn && !fnLongAct.empty() ? fnLongAct : longAct).empty(); }
+  bool hasDbl(bool fn) const  { return !(fn && !fnDblAct.empty() ? fnDblAct : dblAct).empty(); }
+  void fireLong(bool fn) { fire((fn && !fnLongAct.empty() ? fnLongAct : longAct).get()); }
+  void fireDbl(bool fn)  { fire((fn && !fnDblAct.empty() ? fnDblAct : dblAct).get()); }
 public:
-  Button(uint8_t p, const ActPair& a, const ActPair& f, const ActPair& l, const ActPair& d, bool r = false)
-    : pin(p), act(a), fnAct(f), longAct(l), dblAct(d), rep(r) {}
+  Button(uint8_t p, const ActPair& a, const ActPair& f, const ActPair& l, const ActPair& d, bool r = false,
+         const ActPair& fl = ActPair(), const ActPair& fd = ActPair())
+    : pin(p), act(a), fnAct(f), longAct(l), dblAct(d), fnLongAct(fl), fnDblAct(fd), rep(r) {}
   void begin() override { pinMode(pin, INPUT_PULLUP); }
   void update() override {
     const uint32_t now = millis();
@@ -1186,29 +1166,28 @@ public:
       if (raw != lastRaw) { lastRaw = raw; lastChange = now; }
       if (now - lastChange > 20 && raw != stable) {
         stable = raw;
-        if (stable == LOW) { downAt = now; lastRep = now; single(); }
+        if (stable == LOW) { downAt = now; lastRep = now; single(fnDown > 0); }
       }
-      if (stable == LOW && now - downAt >= REP_DELAY && now - lastRep >= REP_MS) { lastRep = now; markUsed(); single(); }
+      if (stable == LOW && now - downAt >= REP_DELAY && now - lastRep >= REP_MS) { lastRep = now; markUsed(); single(fnDown > 0); }
       return;
     }
-    const bool hasLong = !longAct.empty(), hasDbl = !dblAct.empty();
     bool raw = digitalRead(pin);
     if (raw != lastRaw) { lastRaw = raw; lastChange = now; }
     if (now - lastChange > 20 && raw != stable) {
       stable = raw;
       if (stable == LOW) {                                 // pressed
-        downAt = now; longDone = false;
-        if (!hasLong && !hasDbl) single();                 // nothing to wait for: act right away
+        downAt = now; longDone = false; fnAt = fnDown > 0;
+        if (!hasLong(fnAt) && !hasDbl(fnAt)) single(fnAt); // nothing to wait for: act right away
         else markUsed();
-      } else if (hasLong || hasDbl) {                      // released
+      } else if (hasLong(fnAt) || hasDbl(fnAt)) {          // released
         if (longDone) {}                                   // the long press already ran
-        else if (hasDbl && pending) { pending = false; fire(dblAct.get()); }
-        else if (hasDbl) { pending = true; pendingUntil = now + DOUBLE_MS; }
-        else single();
+        else if (hasDbl(fnAt) && pending) { pending = false; fireDbl(fnAt); }
+        else if (hasDbl(fnAt)) { pending = true; pendFn = fnAt; pendingUntil = now + DOUBLE_MS; }
+        else single(fnAt);
       }
     }
-    if (hasLong && stable == LOW && !longDone && now - downAt >= LONG_MS) { longDone = true; pending = false; fire(longAct.get()); }
-    if (pending && stable == HIGH && (int32_t)(now - pendingUntil) >= 0) { pending = false; single(); }
+    if (stable == LOW && !longDone && hasLong(fnAt) && now - downAt >= LONG_MS) { longDone = true; pending = false; fireLong(fnAt); }
+    if (pending && stable == HIGH && (int32_t)(now - pendingUntil) >= 0) { pending = false; single(pendFn); }
   }
 };
 
@@ -4656,7 +4635,8 @@ static void applyConfig(JsonDocument& d) {
     String t = c["type"] | "";
     if (t == "button") {
       comps[ncomps++] = new Button(c["pin"].as<int>(), parsePair(c["action"] | ""), parsePair(c["fnAction"] | ""),
-                                   parsePair(c["long"] | ""), parsePair(c["dbl"] | ""), (int)(c["rep"] | 0) != 0);
+                                   parsePair(c["long"] | ""), parsePair(c["dbl"] | ""), (int)(c["rep"] | 0) != 0,
+                                   parsePair(c["fnLong"] | ""), parsePair(c["fnDbl"] | ""));
       addWake(c["pin"].as<int>());
     } else if (t == "fn") {
       comps[ncomps++] = new FnButton(c["pin"].as<int>());
@@ -4667,7 +4647,8 @@ static void applyConfig(JsonDocument& d) {
     } else if (t == "encoder") {
       int sw = c["sw"] | -1;
       Button* swb = sw >= 0 ? new Button(sw, parsePair(c["swAction"] | ""), parsePair(c["swFnAction"] | ""),
-                                         parsePair(c["swLong"] | ""), parsePair(c["swDbl"] | "")) : nullptr;
+                                         parsePair(c["swLong"] | ""), parsePair(c["swDbl"] | ""), false,
+                                         parsePair(c["swFnLong"] | ""), parsePair(c["swFnDbl"] | "")) : nullptr;
       comps[ncomps++] = new Encoder(c["a"].as<int>(), c["b"].as<int>(), c["div"] | 4,
                                     parsePair(c["cw"] | ""), parsePair(c["ccw"] | ""),
                                     parsePair(c["cwFn"] | ""), parsePair(c["ccwFn"] | ""), swb);
@@ -4970,11 +4951,12 @@ function render(){
     h+=`<div class=card><h3>${c.type}<button class=x onclick="del(${i})">&#10005;</button></h3>`;
     if(c.type=='button') h+=fld('GPIO pin',P+'pin',c.pin,1)+act('Action (press)',P+'action',c.action)
       +sel('Hold to repeat',P+'rep',c.rep||0,[[0,'No'],[1,'Yes: holding keeps repeating the action (long press and double tap are then not used)']],1)+act('Long press (optional)',P+'long',c.long)
-      +act('Double tap (optional)',P+'dbl',c.dbl)+act('Action with Fn held (optional)',P+'fnAction',c.fnAction);
+      +act('Double tap (optional)',P+'dbl',c.dbl)+act('Action with Fn held (optional)',P+'fnAction',c.fnAction)
+      +act('Long press with Fn held (optional)',P+'fnLong',c.fnLong)+act('Double tap with Fn held (optional)',P+'fnDbl',c.fnDbl);
     if(c.type=='encoder') h+=fld('Pin A',P+'a',c.a,1)+fld('Pin B',P+'b',c.b,1)+fld('Steps per click (1-8, usually 2 or 4)',P+'div',c.div,1)
       +act('Clockwise',P+'cw',c.cw)+act('Counter-clockwise',P+'ccw',c.ccw)
       +act('Clockwise with Fn held',P+'cwFn',c.cwFn)+act('Counter-clockwise with Fn held',P+'ccwFn',c.ccwFn)
-      +fld('Push-switch pin (-1 = none)',P+'sw',c.sw,1)+act('Push action',P+'swAction',c.swAction)+act('Push: long press (optional)',P+'swLong',c.swLong)+act('Push: double tap (optional)',P+'swDbl',c.swDbl)+act('Push with Fn held',P+'swFnAction',c.swFnAction);
+      +fld('Push-switch pin (-1 = none)',P+'sw',c.sw,1)+act('Push action',P+'swAction',c.swAction)+act('Push: long press (optional)',P+'swLong',c.swLong)+act('Push: double tap (optional)',P+'swDbl',c.swDbl)+act('Push with Fn held',P+'swFnAction',c.swFnAction)+act('Push: long press with Fn held (optional)',P+'swFnLong',c.swFnLong)+act('Push: double tap with Fn held (optional)',P+'swFnDbl',c.swFnDbl);
     if(c.type=='timer') h+=fld('GPIO pin',P+'pin',c.pin,1)+'<small>Timer button: tap = +1 min, hold = +5 s every 50 ms, double tap = -1 min. It starts 3 s after the last press. Press while it runs = back to setting, press when it rings = stop. The matrix shows the timer by itself.<br>Triple click = stopwatch (triple click again = timer). Stopwatch: tap = start / pause / go on, double tap = back to 0:00.</small>';
     if(c.type=='fn') h+=fld('GPIO pin',P+'pin',c.pin,1)+'<small>Fn (control) button: hold it and press a button or turn an encoder to run its "with Fn held" action. If that action is empty, the normal action runs.</small>';
     if(c.type=='pot') h+=fld('ADC1 pin (GPIO 1-10)',P+'pin',c.pin,1)+fld('Steps over full travel',P+'steps',c.steps,1)
@@ -5020,10 +5002,10 @@ function render(){
   <small>Allowed pins: 1,2,4-11,14-18. Pots and joystick axes: 1-10 only. Reserved: 21 (mode), 38 (strip), 39/40 (effect buttons), 47 (matrix), 41/42 (OLED), 12/13 (LED power switches).</small>`;
   app.innerHTML=h;
 }
-const D={button:{type:'button',pin:4,action:'copy',rep:0,long:'',dbl:'',fnAction:''},
+const D={button:{type:'button',pin:4,action:'copy',rep:0,long:'',dbl:'',fnAction:'',fnLong:'',fnDbl:''},
  fn:{type:'fn',pin:11},
  timer:{type:'timer',pin:14},
- encoder:{type:'encoder',a:8,b:9,div:4,cw:'volup',ccw:'voldown',cwFn:'',ccwFn:'',sw:-1,swAction:'',swLong:'',swDbl:'',swFnAction:''},
+ encoder:{type:'encoder',a:8,b:9,div:4,cw:'volup',ccw:'voldown',cwFn:'',ccwFn:'',sw:-1,swAction:'',swLong:'',swDbl:'',swFnAction:'',swFnLong:'',swFnDbl:''},
  pot:{type:'pot',pin:1,steps:32,up:'media:volup',down:'media:voldown'},
  joystick:{type:'joystick',x:1,y:2,sw:-1,btn:'left',mode:'mouse',sens:12,dead:12,invX:0,invY:0},
  remotejoy:{type:'remotejoy',btn:'left',mode:'mouse',sens:12,dead:12,invX:0,invY:0,dbl:'',long:'rightclick',sdbl:'',
@@ -5673,8 +5655,6 @@ void setup() {
   }
 
   pinMode(PIN_MODE_BTN, INPUT_PULLUP);
-  pinMode(PIN_STRIP_BTN, INPUT_PULLUP);
-  pinMode(PIN_MAT_BTN, INPUT_PULLUP);
 
   // effect last chosen with the buttons (cleared whenever the config is saved in the web UI)
   if (profileMode == 0) profile = prefs.getUChar("prof", 0) ? 1 : 0;   // last mode until the device is recognised
@@ -5737,7 +5717,6 @@ void loop() {
     homeWifiTick();
   } else {
     for (uint8_t i = 0; i < ncomps; i++) comps[i]->update();
-    fxButtonsTick();
     { static uint32_t lastClk = 0;                          // night mode needs the clock: try again every 10 min if it was not set at start-up
       if (cCfg.night && !ckBusy && !sotaBusy && !timeValid() && millis() - lastClk > 600000UL) { lastClk = millis(); syncClock(); } }
     if (profileDirty) { profileDirty = false; prefs.putUChar("prof", profile); }   // remember iPad / PC
