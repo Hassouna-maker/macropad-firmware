@@ -7,7 +7,11 @@ struct ArForm;
 struct TextLine;
 
 /*
- * ESP32-S3 Wireless Macro Pad v7.0  (Arduino IDE / arduino-esp32 core 3.x)
+ * ESP32-S3 Wireless Macro Pad v7.1  (Arduino IDE / arduino-esp32 core 3.x)
+ *
+ * NEW in v7.1: a pot can be a BRIGHTNESS KNOB: in the setup page pick what it controls (whole device incl. stick, strip, matrix or OLED;
+ *   it scales the brightness saved in the setup page; "Reverse direction" if it turns the wrong way). Removed: the 7 matrix games and all OLED
+ *   animations and movies (the OLED main screen is now the clock or the page). Saved matrix favourites / effect are converted automatically.
  *
  * NEW in v7.0: long press and double tap also have a "with Fn held" version (buttons and encoder push-switch). The built-in strip/matrix effect buttons
  *   (GPIO39/40) are gone: use normal buttons with led:next / led:prev / led:toggle (and mat:...), e.g. one key: press = led:next, double = led:prev,
@@ -392,14 +396,12 @@ static const char* const MAT_FX[] = {"plasma","psfire","fire","rain","waves","la
                                      "lissajous","rainbow","swirl","tunnel","radar","noise","ocean","checker",
                                      "bounce","fireworks","starfield","equalizer","heart","sinewave","orbits",
                                      "aurora","metaballs","fireflies","static","text","day color","timer",
-                                     "joystick","snake","pong","breakout","dodge","tetris","flappy","invaders"};   // then the WLED effects, then "off"
+                                     "joystick"};   // then the WLED effects, then "off"
 enum { MF_PLASMA, MF_PSFIRE, MF_FIRE, MF_RAIN, MF_WAVES, MF_LAVA, MF_RIPPLES, MF_LIFE, MF_STARS,
        MF_LISSAJOUS, MF_RAINBOW, MF_SWIRL, MF_TUNNEL, MF_RADAR, MF_NOISE, MF_OCEAN, MF_CHECKER,
        MF_BOUNCE, MF_FIREWORKS, MF_STARFIELD, MF_EQ, MF_HEART, MF_SINEWAVE, MF_ORBITS,
        MF_AURORA, MF_METABALLS, MF_FIREFLIES, MF_STATIC, MF_TEXT, MF_DAY, MF_TIMER, MF_JOY,
-       MF_SNAKE, MF_PONG, MF_BREAKOUT, MF_DODGE, MF_TETRIS, MF_FLAPPY, MF_INVADERS,
        MF_WLED, MF_OFF = MF_WLED + wfx::WFX2D_N };   // MF_WLED.. = effects copied from WLED
-static bool isGameFx(uint8_t fx) { return fx >= MF_SNAKE && fx <= MF_INVADERS; }
 constexpr uint8_t N_GIF = 8;                            // GIFs uploaded in the setup page (kept on the flash), shown on the matrix
 constexpr uint8_t MF_GIF0 = MF_OFF + 1;                 // after "off", so saved effect numbers keep their meaning
 constexpr uint8_t N_MAT_FX = MF_GIF0 + N_GIF;
@@ -439,20 +441,10 @@ static volatile int16_t  pvS = -1, pvM = -1;                  // effect the setu
 static volatile uint32_t pvUntil = 0;                         // ... until then (the page asks again every time you pick one)
 
 // OLED main screen: clock, page, cycle through animations, or one animation
-static const char* const OANIM_NAMES[] = {"stripes","rain","starfield","cube","waves","bounce","life","snow",
-                                          "tunnel","eyes","rocket","night drive","fish tank"};
-enum { OA_STRIPES, OA_RAIN, OA_STARS, OA_CUBE, OA_WAVES, OA_BOUNCE, OA_LIFE, OA_SNOW, OA_TUNNEL, OA_EYES,
-       OA_ROCKET, OA_DRIVE, OA_FISH };
-constexpr uint8_t N_OANIM = sizeof(OANIM_NAMES) / sizeof(OANIM_NAMES[0]);
-static_assert(N_OANIM == OA_FISH + 1, "OLED animation names and enum do not match");
-constexpr int8_t HOME_CLOCK = -1, HOME_PAGE = -2, HOME_CYCLE = -3, HOME_MOVIES = -4;
-constexpr uint32_t CYCLE_MS = 8000;                      // "all animations": each one runs this long
+constexpr int8_t HOME_CLOCK = -1, HOME_PAGE = -2;
 static volatile int8_t oHome = HOME_CLOCK;
 static int8_t parseHome(const String& h) {
   if (h.equalsIgnoreCase("page"))  return HOME_PAGE;
-  if (h.equalsIgnoreCase("cycle")) return HOME_CYCLE;
-  if (h.equalsIgnoreCase("movies")) return HOME_MOVIES;
-  for (uint8_t i = 0; i < N_OANIM; i++) if (h.equalsIgnoreCase(OANIM_NAMES[i])) return (int8_t)i;
   return HOME_CLOCK;
 }
 
@@ -475,9 +467,7 @@ static uint16_t    powerMA = 500;
 
 struct StripCfg { uint16_t count = 8; uint8_t bright = 60, hue = 160, speed = 128; } sCfg;
 static char matText[65] = "MacroPad";                   // matrix "text" effect ({time} and {song} are filled in)
-static uint8_t matGameSpeed = 3, matTextSpeed = 3;        // setup page, 1 (slowest) .. 10 (fastest)
-static float gameSpeedF() { return 0.15f * matGameSpeed; }   // 3 -> 0.45 x the original speed, 10 -> 1.5 x
-static uint32_t gms(uint32_t ms) { return (uint32_t)(ms / gameSpeedF()); }   // a game interval, adjusted to the game speed
+static uint8_t matTextSpeed = 3;        // setup page, 1 (slowest) .. 10 (fastest)
 static int textScroll(uint32_t now, int w, int W) {        // x position of scrolling text (2.5 pixels / s per speed step)
   const uint32_t pos = (uint32_t)((uint64_t)now * matTextSpeed * 5 / 2000);
   return W - (int)(pos % (uint32_t)(w + W));
@@ -485,7 +475,6 @@ static int textScroll(uint32_t now, int w, int W) {        // x position of scro
 
 // inputs for the new LED effects and games
 static volatile float    gStickX = 0, gStickY = 0;       // joystick -1..1 (right / down = positive)
-static volatile bool     gStickBtn = false;               // joystick button (in games)
 static volatile int32_t  encSpin = 0;                     // encoder steps (encoder rainbow)
 static volatile uint16_t keyPresses = 0;                  // every action (key ripple, typing heat)
 
@@ -505,7 +494,7 @@ static volatile bool     swMode = false;                  // the timer button wo
 static volatile uint8_t  swState = SW_IDLE;
 static volatile uint32_t swStartAt = 0, swAccum = 0;      // elapsed = swAccum (+ time since swStartAt while running)
 static uint32_t swElapsed() { return swState == SW_RUN ? swAccum + (millis() - swStartAt) : swAccum; }
-constexpr const char* FW_VERSION = "7.0";
+constexpr const char* FW_VERSION = "7.1";
 static volatile bool sotaBusy = false;                    // sending a firmware file to the stick right now
 static bool sleepAllowed() { return timerState == T_IDLE && swState == SW_IDLE && !sotaBusy; }   // never sleep with a timer / stopwatch / stick update going
 
@@ -545,6 +534,8 @@ static volatile uint16_t lastMediaKey = 0;                // last media key sent
 // iPad / PC mode
 static volatile uint8_t  profile = 0;                     // 0 = iPad, 1 = PC
 static volatile uint8_t  nightNow = 255;                  // night mode brightness scale right now (255 = day)
+// brightness knob (a pot with "controls" set to a brightness): 255 = full, multiplies the saved brightness
+static volatile uint8_t  potAll = 255, potStrip = 255, potMat = 255, potOled = 255;
 // config mode on the home Wi-Fi: 0 = not set, 1 = joining, 2 = on it, 3 = failed
 static volatile uint8_t homeState = 0;
 static char     homeIp[16] = "";
@@ -962,14 +953,9 @@ static void runLocal(uint8_t l) {
     case 10: setProfile(profile ^ 1, true); return;        // iPad <-> PC (until the next connection in automatic mode)
     case 11: setProfile(0, true); return;
     case 12: setProfile(1, true); return;
-    case 9: {                                              // next OLED main screen: clock -> animations -> cycle -> movies -> page
+    case 9: {                                              // next OLED main screen: clock <-> page
       int8_t h = oHome;
-      if (h == HOME_CLOCK) h = 0;
-      else if (h >= 0 && h < (int8_t)N_OANIM - 1) h++;
-      else if (h == (int8_t)N_OANIM - 1) h = HOME_CYCLE;
-      else if (h == HOME_CYCLE) h = HOME_MOVIES;
-      else if (h == HOME_MOVIES) h = HOME_PAGE;
-      else h = HOME_CLOCK;
+      h = (h == HOME_CLOCK) ? HOME_PAGE : HOME_CLOCK;
       oHome = h;
       prefs.putChar("ohome", h);                           // remembered (cleared when the config is saved)
       return;
@@ -1336,21 +1322,38 @@ public:
   }
 };
 
+// Pot: either steps (every step fires "up" / "down" actions, e.g. volume), or a brightness knob (bt != 0):
+// bt 1 = whole device (strip + matrix + OLED + stick), 2 = strip, 3 = matrix, 4 = OLED.
+// The knob multiplies the brightness saved in the setup page (full turn = that brightness, down = dark).
 class Pot : public Component {
-  uint8_t pin; uint8_t steps; ActPair up, down;
-  float filt = 0, committed = 0; bool primed = false; uint32_t lastRead = 0;
+  uint8_t pin; uint8_t steps; ActPair up, down; uint8_t bt; bool inv;
+  float filt = 0, committed = 0; bool primed = false; uint32_t lastRead = 0; int16_t lastV = -1;
 public:
-  Pot(uint8_t p, uint8_t s, const ActPair& u, const ActPair& d)
-    : pin(p), steps(constrain(s, 2, 100)), up(u), down(d) {}
+  Pot(uint8_t p, uint8_t s, const ActPair& u, const ActPair& d, uint8_t target = 0, bool invert = false)
+    : pin(p), steps(constrain(s, 2, 100)), up(u), down(d), bt(target), inv(invert) {}
   void begin() override {
     analogReadResolution(12);
     analogSetPinAttenuation(pin, ADC_11db);
     pinMode(pin, INPUT);
   }
+  void setLevel(uint8_t v) {
+    switch (bt) { case 1: potAll = v; break; case 2: potStrip = v; break; case 3: potMat = v; break; case 4: potOled = v; break; }
+  }
   void update() override {
     if (millis() - lastRead < 10) return;
     lastRead = millis();
     float raw = analogRead(pin);
+    if (bt) {                                               // brightness knob
+      if (!primed) filt = raw; else filt += (raw - filt) * 0.15f;
+      float f = (filt - 100.0f) / (4095.0f - 200.0f);       // trim the noisy ends of the travel
+      f = f < 0 ? 0 : f > 1 ? 1 : f;
+      if (inv) f = 1.0f - f;
+      int v = (int)(f * f * 255.0f + 0.5f);                 // squared: the eye sees brightness on a curve, so the low end gets finer
+      if (v < 3) v = 3;                                     // never completely dark
+      if (!primed) { primed = true; lastV = v; setLevel((uint8_t)v); return; }
+      if (abs(v - lastV) >= 2 || (v != lastV && (v == 3 || v == 255))) { lastV = v; setLevel((uint8_t)v); markUsed(); }
+      return;
+    }
     if (!primed) { filt = committed = raw; primed = true; return; }
     filt += (raw - filt) * 0.2f;
     float w = 4096.0f / steps;
@@ -1505,7 +1508,7 @@ static void stickInfoTick() {
   p.bat   = batPct;
   float fr; bool pl; uint8_t sh;
   if (songProgress(fr, pl, sh)) { p.song = pl ? 1 : 2; p.sFrac = (uint16_t)(fr * 65535); p.sHue = sh; }
-  p.night = nightNow;
+  p.night = scale8(nightNow, potAll);                      // the stick follows the device brightness knob too
   addStickPeer();
   esp_now_send(stickMac, (const uint8_t*)&p, sizeof p);
   static uint8_t favCnt = 0;
@@ -1862,24 +1865,21 @@ public:
   }
   void update() override {
     uint32_t now = millis();
-    const bool game = matOn && !matOff && !cfgMode && isGameFx(curMFx);   // a game on the matrix uses the stick
     const bool conn = hid && hid->isConnected();
     bool fresh = remote && (now - rjLast < 300);          // stick board silent for 300 ms = treat as released
     if (remote) {
-      const bool down = fresh && (rjBtn & 1);                                  // the button itself (games)
+      const bool down = fresh && (rjBtn & 1);                                  // the button itself
       const bool hold = fresh && (rjV2 ? (rjBtn & 8) : (rjBtn & 1));           // keep the mouse button pressed
       if (down != remoteDown) {
         remoteDown = down;
-        if (game) { gStickBtn = down; if (down) markUsed(); }
       }
-      if (game) hold_(false, conn);
-      else if (hold != remoteHold) { hold_(hold, conn); if (hold) { noteInput("mouse click"); triggerFlash(); } }
+      if (hold != remoteHold) { hold_(hold, conn); if (hold) { noteInput("mouse click"); triggerFlash(); } }
       if (fresh && rjV2) {                                 // gestures from the stick: one per new evSeq
         const uint8_t seq = rjEvSeq;
         if (!evInit) { evInit = true; lastSeq = seq; }
         else if (seq != lastSeq) {
           lastSeq = seq; markUsed();
-          if (!game) switch (rjEv) {
+          switch (rjEv) {
             case EV_TAP:  fire(rjClick.get()); break;
             case EV_DBL:  fire(rjDbl.get());   break;
             case EV_LONG: fire(rjLong.get());  break;
@@ -1895,11 +1895,8 @@ public:
       if (raw != swRaw) { swRaw = raw; lastChange = now; }
       if (now - lastChange > 20 && raw != swStable) {
         swStable = raw;
-        if (game) { gStickBtn = swStable == LOW; if (swStable == LOW) markUsed(); }
-        else {
-          if (conn) hid->mouseButton(btnMask, swStable == LOW);
-          if (swStable == LOW) { noteInput("mouse click"); triggerFlash(); }
-        }
+        if (conn) hid->mouseButton(btnMask, swStable == LOW);
+        if (swStable == LOW) { noteInput("mouse click"); triggerFlash(); }
       }
     }
     if (now - last < 8) return;                            // up to ~100 reads a second
@@ -1918,10 +1915,6 @@ public:
     if (ny > 1) ny = 1;
     if (ny < -1) ny = -1;
     gStickX = invX ? -nx : nx; gStickY = invY ? -ny : ny;
-    if (game) {                                            // playing: the stick doesn't move the mouse
-      if (fabsf(nx) > 0.3f || fabsf(ny) > 0.3f) markUsed();
-      return;
-    }
     if (!conn) return;
     float dz = rng * deadPct / 100.0f;
     const bool precise = remote && fresh && rjV2 && (rjBtn & 32);
@@ -2258,14 +2251,7 @@ static void lifeSeed() {
   for (uint16_t i = 0; i < 256; i++) lifeA[i] = ((i % 16) < mCfg.w && (i / 16) < mCfg.h && random8() < 90) ? 1 : 0;
   memset(lifeAge, 0, sizeof lifeAge); lifeGen = 0;
 }
-// ---- games: shared state
-static bool     gameNew = true;                           // set when the matrix effect changes
-static uint32_t gMsgUntil = 0;                            // showing a score message until then
-static char     gMsg[16];
-static bool     gRestart = false;
-
 static void resetMat() {
-  gameNew = true; gMsgUntil = 0; gRestart = false;
   fill_solid(mBuf, MAX_MAT + 1, CRGB::Black);
   memset(heat2, 0, sizeof heat2);
   memset(hbuf, 0, sizeof hbuf);
@@ -2469,309 +2455,6 @@ static int drawDigit(uint8_t d, int x, int y, CRGB c, uint8_t W, uint8_t H) {   
   return w;
 }
 
-static uint32_t gMsgStart = 0; static bool gMsgSized = false;
-static void gameMsg(const char* m, uint32_t ms, bool restart) {
-  strlcpy(gMsg, m, sizeof gMsg); gMsgStart = millis(); gMsgUntil = gMsgStart + ms; gRestart = restart; gMsgSized = false;
-}
-static bool showGameMsg(uint8_t W, uint8_t H, uint16_t N) {   // true while a message is shown
-  if ((int32_t)(gMsgUntil - millis()) > 0) {
-    fill_solid(mBuf, N, CRGB::Black);
-    int w = textWidth(gMsg), y0 = (H - 8) / 2;
-    if (!gMsgSized) {                                     // long message: keep it up until it has scrolled across once
-      gMsgSized = true;
-      if (w > W) { uint32_t need = (uint32_t)(w + W) * 2000 / (matTextSpeed * 5) + 300; if (gMsgUntil - gMsgStart < need) gMsgUntil = gMsgStart + need; }
-    }
-    int x = w <= W ? (W - w) / 2 : textScroll(millis() - gMsgStart, w, W);
-    drawText(gMsg, x, y0, W, H, 0, true);
-    return true;
-  }
-  if (gRestart) { gRestart = false; gameNew = true; }
-  return false;
-}
-static float gameStep() {                                 // frame time, 1.0 = 20 ms
-  static uint32_t last = 0; uint32_t now = millis();
-  float k = last ? (now - last) / 20.0f : 1.0f; last = now;
-  return (k > 3 ? 3 : k) * gameSpeedF();                   // everything that moves is scaled by the game speed
-}
-
-static void gameSnake(uint8_t W, uint8_t H, uint16_t N) {
-  static uint8_t bx[256], by[256]; static uint16_t len, head; static int8_t dx, dy, ndx, ndy;
-  static uint8_t fx2, fy2; static uint32_t lastStep;
-  auto food = [&]() {
-    for (int tries = 0; tries < 200; tries++) {
-      uint8_t x = random8(W), y = random8(H); bool hit = false;
-      for (uint16_t i = 0; i < len; i++) { uint16_t k = (head + 256 - i) & 255; if (bx[k] == x && by[k] == y) { hit = true; break; } }
-      if (!hit) { fx2 = x; fy2 = y; return; }
-    }
-  };
-  if (gameNew) {
-    gameNew = false; len = 3; head = 2; dx = ndx = 1; dy = ndy = 0; lastStep = millis();
-    for (uint8_t i = 0; i < 3; i++) { bx[i] = i; by[i] = H / 2; }
-    food();
-  }
-  if (showGameMsg(W, H, N)) return;
-  if (fabsf(gStickX) > 0.5f || fabsf(gStickY) > 0.5f) {    // turn (never straight back)
-    int8_t tx = 0, ty = 0;
-    if (fabsf(gStickX) > fabsf(gStickY)) tx = gStickX > 0 ? 1 : -1; else ty = gStickY > 0 ? 1 : -1;
-    if (tx != -dx || ty != -dy) { ndx = tx; ndy = ty; }
-  }
-  const uint32_t stepMs = gms(max(90, 220 - (int)len * 5));
-  if (millis() - lastStep >= stepMs) {
-    lastStep = millis(); dx = ndx; dy = ndy;
-    int nx = bx[head] + dx, ny = by[head] + dy;
-    bool dead = nx < 0 || ny < 0 || nx >= W || ny >= H;
-    for (uint16_t i = 0; !dead && i + 1 < len; i++) { uint16_t k = (head + 256 - i) & 255; if (bx[k] == nx && by[k] == ny) dead = true; }
-    if (dead) { char m[16]; snprintf(m, sizeof m, "%d", len - 3); gameMsg(m, 2500, true); return; }
-    head = (head + 1) & 255; bx[head] = nx; by[head] = ny;
-    if (nx == fx2 && ny == fy2) { if (len < 250) len++; food(); }
-  }
-  fill_solid(mBuf, N, CRGB::Black);
-  for (uint16_t i = 0; i < len; i++) { uint16_t k = (head + 256 - i) & 255; mBuf[XY(bx[k], by[k])] = i ? CRGB(CHSV(96, 255, 200 - min(150, (int)i * 6))) : CRGB(180, 255, 180); }
-  mBuf[XY(fx2, fy2)] = ((millis() / 200) & 1) ? CRGB(255, 0, 0) : CRGB(120, 0, 0);
-}
-
-static void gamePong(uint8_t W, uint8_t H, uint16_t N) {
-  static float py, ay2, bxp, byp, vx, vy; static uint8_t me, cpu;
-  const int P = max(2, H / 4);
-  auto serve = [&](int dir) { bxp = W / 2.0f; byp = H / 2.0f; vx = 0.22f * dir; vy = ((int)random8(2) ? 1 : -1) * 0.12f; };
-  if (gameNew) { gameNew = false; py = ay2 = (H - P) / 2.0f; me = cpu = 0; serve(1); }
-  if (showGameMsg(W, H, N)) return;
-  const float k = gameStep();
-  py += gStickY * 0.45f * k; py = constrain(py, 0.0f, (float)(H - P));
-  float target = byp - P / 2.0f; float d = target - ay2;    // computer paddle, a bit slow so you can win
-  ay2 += constrain(d, -0.16f * k, 0.16f * k); ay2 = constrain(ay2, 0.0f, (float)(H - P));
-  bxp += vx * k; byp += vy * k;
-  if (byp < 0) { byp = -byp; vy = -vy; }
-  if (byp > H - 1) { byp = 2 * (H - 1) - byp; vy = -vy; }
-  if (bxp < 1 && vx < 0) {
-    if (byp >= py - 0.5f && byp <= py + P - 0.5f) { bxp = 1; vx = -vx * 1.05f; vy += (byp - (py + P / 2.0f)) * 0.08f; }
-    else if (bxp < 0) { cpu++; char m[16]; snprintf(m, sizeof m, "%d-%d", me, cpu); gameMsg(m, 1500, cpu >= 5); serve(1); if (cpu >= 5) return; }
-  }
-  if (bxp > W - 2 && vx > 0) {
-    if (byp >= ay2 - 0.5f && byp <= ay2 + P - 0.5f) { bxp = W - 2; vx = -vx * 1.05f; vy += (byp - (ay2 + P / 2.0f)) * 0.08f; }
-    else if (bxp > W - 1) { me++; char m[16]; snprintf(m, sizeof m, "%d-%d", me, cpu); gameMsg(m, 1500, me >= 5); serve(-1); if (me >= 5) return; }
-  }
-  vx = constrain(vx, -0.6f, 0.6f); vy = constrain(vy, -0.35f, 0.35f);
-  fill_solid(mBuf, N, CRGB::Black);
-  for (int i = 0; i < P; i++) { mBuf[XY(0, (int)py + i)] = CRGB(0, 120, 255); mBuf[XY(W - 1, (int)ay2 + i)] = CRGB(255, 60, 0); }
-  for (int y = 0; y < H; y += 2) mBuf[XY(W / 2, y)] = CRGB(20, 20, 20);
-  mBuf[XY((int)(bxp + 0.5f), (int)(byp + 0.5f))] = CRGB::White;
-}
-
-static void gameBreakout(uint8_t W, uint8_t H, uint16_t N) {
-  static uint8_t bricks[4][16]; static float pxp, bxp, byp, vx, vy; static bool onPaddle; static uint8_t lives, level; static uint16_t score;
-  const int PW = max(3, W / 4), rows = H >= 12 ? 4 : 2, top = 1;
-  auto fillBricks = [&]() { for (int r = 0; r < 4; r++) for (int c = 0; c < 16; c++) bricks[r][c] = r < rows; };
-  if (gameNew) { gameNew = false; fillBricks(); pxp = (W - PW) / 2.0f; onPaddle = true; lives = 3; level = 0; score = 0; }
-  if (showGameMsg(W, H, N)) return;
-  const float k = gameStep();
-  pxp += gStickX * 0.5f * k; pxp = constrain(pxp, 0.0f, (float)(W - PW));
-  if (onPaddle) {
-    bxp = pxp + PW / 2.0f; byp = H - 2;
-    if (gStickBtn || fabsf(gStickY) > 0.6f) { onPaddle = false; float sp = 0.2f + level * 0.03f; vx = sp * 0.7f; vy = -sp; }
-  } else {
-    bxp += vx * k; byp += vy * k;
-    if (bxp < 0) { bxp = -bxp; vx = -vx; }
-    if (bxp > W - 1) { bxp = 2 * (W - 1) - bxp; vx = -vx; }
-    if (byp < 0) { byp = -byp; vy = -vy; }
-    int cx2 = (int)(bxp + 0.5f), cy2 = (int)(byp + 0.5f), r = cy2 - top;
-    if (r >= 0 && r < rows && cx2 >= 0 && cx2 < W && bricks[r][cx2 / 2]) { bricks[r][cx2 / 2] = 0; vy = -vy; score++; }
-    if (byp >= H - 2 && vy > 0 && bxp >= pxp - 0.5f && bxp <= pxp + PW - 0.5f) {   // paddle
-      byp = H - 2; vy = -vy; vx += (bxp - (pxp + PW / 2.0f)) * 0.06f; vx = constrain(vx, -0.4f, 0.4f);
-    }
-    if (byp > H) {                                           // missed
-      onPaddle = true;
-      if (lives > 1) { lives--; char m[16]; snprintf(m, sizeof m, "x%d", lives); gameMsg(m, 1000, false); }
-      else { char m[16]; snprintf(m, sizeof m, "%d", score); gameMsg(m, 2500, true); return; }
-    }
-    bool any = false;
-    for (int rr = 0; rr < rows; rr++) for (int c = 0; c < (W + 1) / 2; c++) if (bricks[rr][c]) any = true;
-    if (!any) { level++; fillBricks(); onPaddle = true; gameMsg("WIN!", 1200, false); }
-  }
-  fill_solid(mBuf, N, CRGB::Black);
-  for (int rr = 0; rr < rows; rr++) for (int x = 0; x < W; x++) if (bricks[rr][x / 2]) mBuf[XY(x, top + rr)] = CHSV(rr * 40 + ((x / 2) & 1) * 12, 255, 220);
-  for (int i = 0; i < PW; i++) mBuf[XY((int)pxp + i, H - 1)] = CRGB(0, 150, 255);
-  mBuf[XY((int)(bxp + 0.5f), (int)(byp + 0.5f))] = CRGB::White;
-}
-
-static void gameDodge(uint8_t W, uint8_t H, uint16_t N) {
-  static float pxp; static float ox[10], oy[10], ov[10]; static bool on[10]; static uint32_t startMs, nextSpawn;
-  if (gameNew) { gameNew = false; pxp = W / 2.0f - 1; for (auto& o : on) o = false; startMs = millis(); nextSpawn = millis() + 600; }
-  if (showGameMsg(W, H, N)) return;
-  const float k = gameStep();
-  const uint32_t alive = millis() - startMs;
-  pxp += gStickX * 0.5f * k; pxp = constrain(pxp, 0.0f, (float)(W - 2));
-  if ((int32_t)(millis() - nextSpawn) >= 0) {
-    for (int i = 0; i < 10; i++) if (!on[i]) { on[i] = true; ox[i] = random8(W); oy[i] = -1; ov[i] = 0.08f + alive / 400000.0f + random8() / 4000.0f; break; }
-    nextSpawn = millis() + gms(max(150, 650 - (int)(alive / 100)));
-  }
-  fill_solid(mBuf, N, CRGB::Black);
-  for (int i = 0; i < 10; i++) {
-    if (!on[i]) continue;
-    oy[i] += ov[i] * k;
-    if (oy[i] >= H) { on[i] = false; continue; }
-    int x = (int)ox[i], y = (int)oy[i];
-    if (y >= H - 1 && (x == (int)pxp || x == (int)pxp + 1)) { char m[16]; snprintf(m, sizeof m, "%lus", (unsigned long)(alive / 1000)); gameMsg(m, 2500, true); return; }
-    if (y >= 0) mBuf[XY(x, y)] = CRGB(255, 80, 0);
-  }
-  mBuf[XY((int)pxp, H - 1)] = CRGB(0, 255, 120); mBuf[XY((int)pxp + 1, H - 1)] = CRGB(0, 255, 120);
-}
-
-// edge detection for the stick pushed up and the stick button (each called once per frame by the game)
-static bool stickUpEdge() { static bool held = false; const bool now = gStickY < -0.55f; const bool e = now && !held; held = now; return e; }
-static bool stickBtnEdge() { static bool held = false; const bool now = gStickBtn; const bool e = now && !held; held = now; return e; }
-
-// Tetris: stick left / right = move, up or button = rotate, down = drop faster
-static void gameTetris(uint8_t W, uint8_t H, uint16_t N) {
-  static const uint16_t SH[7] = {0x0F00, 0x4E00, 0x6C00, 0xC600, 0x8E00, 0x2E00, 0x6600};   // I T S Z J L O (4x4, row by row)
-  static uint8_t board[16][10]; static int8_t px, py; static uint8_t pc, rot; static uint32_t lastFall, lastMove; static uint16_t lines;
-  const int BW = W < 10 ? W : 10, X0 = (W - BW) / 2;
-  auto cells = [&](uint8_t p, uint8_t r, int8_t out[4][2]) {
-    int k = 0;
-    for (int y = 0; y < 4; y++) for (int x = 0; x < 4; x++) if (SH[p] & (0x8000 >> (y * 4 + x))) {
-      int rx = x, ry = y;
-      for (int i = 0; i < (p == 6 ? 0 : r); i++) { int t2 = rx; rx = 3 - ry; ry = t2; }   // the O piece doesn't turn
-      out[k][0] = rx; out[k][1] = ry; k++;
-    }
-  };
-  auto fits = [&](uint8_t p, uint8_t r, int x, int y) {
-    int8_t c[4][2]; cells(p, r, c);
-    for (auto& q : c) { int bx = x + q[0], by = y + q[1]; if (bx < 0 || bx >= BW || by >= H) return false; if (by >= 0 && board[by][bx]) return false; }
-    return true;
-  };
-  auto spawn = [&]() {
-    pc = random8(7); rot = 0; px = BW / 2 - 2; py = pc == 0 ? -1 : 0;
-    if (!fits(pc, rot, px, py)) { char m[16]; snprintf(m, sizeof m, "%u", lines); gameMsg(m, 2500, true); }
-  };
-  if (gameNew) { gameNew = false; memset(board, 0, sizeof board); lines = 0; lastFall = lastMove = millis(); spawn(); }
-  if (showGameMsg(W, H, N)) return;
-  const uint32_t now = millis();
-  if (stickUpEdge() | stickBtnEdge()) { uint8_t r2 = (rot + 1) & 3; if (fits(pc, r2, px, py)) rot = r2; else if (fits(pc, r2, px - 1, py)) { rot = r2; px--; } else if (fits(pc, r2, px + 1, py)) { rot = r2; px++; } }
-  if (fabsf(gStickX) > 0.5f && now - lastMove >= 140) { int d = gStickX > 0 ? 1 : -1; if (fits(pc, rot, px + d, py)) px += d; lastMove = now; }
-  if (fabsf(gStickX) <= 0.5f) lastMove = 0;
-  const uint32_t fallMs = gStickY > 0.6f ? 50 : gms(max(120, 600 - (int)lines * 20));
-  if (now - lastFall >= fallMs) {
-    lastFall = now;
-    if (fits(pc, rot, px, py + 1)) py++;
-    else {                                                   // lock the piece, clear full lines
-      int8_t c[4][2]; cells(pc, rot, c);
-      for (auto& q : c) { int bx = px + q[0], by = py + q[1]; if (by >= 0 && by < H) board[by][bx] = pc + 1; }
-      for (int y = H - 1; y >= 0; y--) {
-        bool full = true; for (int x = 0; x < BW; x++) if (!board[y][x]) { full = false; break; }
-        if (!full) continue;
-        for (int yy = y; yy > 0; yy--) memcpy(board[yy], board[yy - 1], sizeof board[0]);
-        memset(board[0], 0, sizeof board[0]); lines++; y++;
-      }
-      spawn();
-    }
-  }
-  fill_solid(mBuf, N, CRGB::Black);
-  if (X0 > 0) for (int y = 0; y < H; y++) { mBuf[XY(X0 - 1, y)] = CRGB(25, 25, 40); mBuf[XY(X0 + BW, y)] = CRGB(25, 25, 40); }
-  for (int y = 0; y < H; y++) for (int x = 0; x < BW; x++) if (board[y][x]) mBuf[XY(X0 + x, y)] = CHSV((board[y][x] - 1) * 36, 255, 200);
-  int8_t c[4][2]; cells(pc, rot, c);
-  for (auto& q : c) { int by = py + q[1]; if (by >= 0) mBuf[XY(X0 + px + q[0], by)] = CHSV(pc * 36, 200, 255); }
-}
-
-// Flappy: push the stick up (or press its button) to flap through the gaps
-static void gameFlappy(uint8_t W, uint8_t H, uint16_t N) {
-  static float by, vy; static int16_t pxs[3]; static uint8_t gy[3]; static uint32_t lastStep; static uint16_t score;
-  const int gap = H >= 12 ? 5 : 3, birdX = 2, spacing = W >= 12 ? W / 2 + 1 : 6;
-  auto newGap = [&]() { return (uint8_t)(1 + random8(max(1, H - gap - 1))); };
-  if (gameNew) {
-    gameNew = false; by = H / 2.0f; vy = 0; score = 0; lastStep = millis();
-    for (int i = 0; i < 3; i++) { pxs[i] = W + i * spacing; gy[i] = newGap(); }
-  }
-  if (showGameMsg(W, H, N)) return;
-  const float k = gameStep();
-  if (stickUpEdge() | stickBtnEdge()) vy = -0.5f;
-  vy += 0.04f * k; if (vy > 0.6f) vy = 0.6f;
-  by += vy * k;
-  const uint32_t stepMs = gms(max(60, 130 - (int)score * 3));
-  if (millis() - lastStep >= stepMs) {
-    lastStep = millis();
-    for (int i = 0; i < 3; i++) {
-      pxs[i]--;
-      if (pxs[i] == birdX - 1) score++;
-      if (pxs[i] < -1) { int far = max(pxs[0], max(pxs[1], pxs[2])); pxs[i] = far + spacing; gy[i] = newGap(); }
-    }
-  }
-  const int bi = (int)(by + 0.5f);
-  bool dead = by < -0.5f || by > H - 0.5f;
-  for (int i = 0; i < 3 && !dead; i++) if (pxs[i] == birdX && (bi < gy[i] || bi >= gy[i] + gap)) dead = true;
-  if (dead) { char m[16]; snprintf(m, sizeof m, "%u", score); gameMsg(m, 2500, true); return; }
-  fill_solid(mBuf, N, CRGB(0, 0, 18));
-  for (int i = 0; i < 3; i++) if (pxs[i] >= 0 && pxs[i] < W)
-    for (int y = 0; y < H; y++) if (y < gy[i] || y >= gy[i] + gap) mBuf[XY(pxs[i], y)] = CRGB(0, 160, 30);
-  mBuf[XY(birdX, bi)] = CRGB(255, 220, 0); mBuf[XY(birdX + 1, bi)] = CRGB(255, 90, 0);
-}
-
-// Invaders: stick left / right = move, up or button = shoot
-static void gameInvaders(uint8_t W, uint8_t H, uint16_t N) {
-  static bool alive[3][8]; static int fx, fy, dir; static float plx; static uint32_t lastMarch, lastShot, lastBul, lastEnemy;
-  static int8_t bx[2], byy[2]; static int8_t ex[3], ey[3]; static uint8_t lives, wave; static uint16_t score;
-  const int rows = H >= 12 ? 3 : 2, cols = min(8, max(2, (W - 2) / 2));
-  auto newWave = [&]() {
-    for (int r = 0; r < 3; r++) for (int c = 0; c < 8; c++) alive[r][c] = r < rows && c < cols;
-    fx = 0; fy = 0; dir = 1; for (auto& b : byy) b = -1; for (auto& e : ey) e = -1;
-  };
-  if (gameNew) { gameNew = false; lives = 3; wave = 0; score = 0; plx = W / 2.0f; newWave(); lastMarch = lastShot = lastBul = lastEnemy = millis(); }
-  if (showGameMsg(W, H, N)) return;
-  const uint32_t now = millis();
-  const float k = gameStep();
-  plx += gStickX * 0.45f * k; plx = constrain(plx, 1.0f, (float)(W - 2));
-  const int pxi = (int)(plx + 0.5f);
-  const bool fireEdge = stickUpEdge() | stickBtnEdge();
-  if ((fireEdge || ((gStickY < -0.55f || gStickBtn) && now - lastShot > gms(350))))   // shoot (hold = auto fire)
-    for (int i = 0; i < 2; i++) if (byy[i] < 0) { bx[i] = pxi; byy[i] = H - 2; lastShot = now; break; }
-  int alivecount = 0;
-  for (int r = 0; r < rows; r++) for (int c = 0; c < cols; c++) alivecount += alive[r][c];
-  const uint32_t marchMs = gms(max(120, 150 + alivecount * 25 - wave * 40));
-  if (now - lastMarch >= marchMs) {                        // the formation moves; at the edge it steps down
-    lastMarch = now;
-    int minC = 99, maxC = -1;
-    for (int r = 0; r < rows; r++) for (int c = 0; c < cols; c++) if (alive[r][c]) { minC = min(minC, c); maxC = max(maxC, c); }
-    const int left = fx + minC * 2 + dir, right = fx + maxC * 2 + dir;
-    if (left < 0 || right > W - 1) { dir = -dir; fy++; } else fx += dir;
-  }
-  if (now - lastBul >= gms(40)) {                               // bullets
-    lastBul = now;
-    for (int i = 0; i < 2; i++) if (byy[i] >= 0) {
-      byy[i]--;
-      if (byy[i] < 0) continue;
-      for (int r = 0; r < rows; r++) for (int c = 0; c < cols; c++)
-        if (alive[r][c] && fx + c * 2 == bx[i] && fy + r * 2 == byy[i]) { alive[r][c] = false; byy[i] = -1; score++; }
-    }
-  }
-  if (now - lastEnemy >= gms(90)) {                             // enemy shots
-    lastEnemy = now;
-    for (int i = 0; i < 3; i++) if (ey[i] >= 0) {
-      ey[i]++;
-      if (ey[i] >= H - 1 && abs(ex[i] - pxi) <= 1) {          // hit
-        ey[i] = -1;
-        if (--lives == 0) { char m[16]; snprintf(m, sizeof m, "%u", score); gameMsg(m, 2500, true); return; }
-        char m[16]; snprintf(m, sizeof m, "x%u", lives); gameMsg(m, 1000, false);
-      } else if (ey[i] >= H) ey[i] = -1;
-    }
-    if (random8() < 14 + wave * 4) {
-      int c = random8(cols);
-      for (int r = rows - 1; r >= 0; r--) if (alive[r][c]) {
-        for (int i = 0; i < 3; i++) if (ey[i] < 0) { ex[i] = fx + c * 2; ey[i] = fy + r * 2 + 1; break; }
-        break;
-      }
-    }
-  }
-  alivecount = 0; int lowest = -1;
-  for (int r = 0; r < rows; r++) for (int c = 0; c < cols; c++) if (alive[r][c]) { alivecount++; lowest = max(lowest, fy + r * 2); }
-  if (alivecount == 0) { wave++; newWave(); char m[16]; snprintf(m, sizeof m, "WAVE %u", wave + 1); gameMsg(m, 1500, false); return; }
-  if (lowest >= H - 2) { char m[16]; snprintf(m, sizeof m, "%u", score); gameMsg(m, 2500, true); return; }
-  fill_solid(mBuf, N, CRGB::Black);
-  for (int r = 0; r < rows; r++) for (int c = 0; c < cols; c++)
-    if (alive[r][c]) mBuf[XY(fx + c * 2, fy + r * 2)] = CHSV(200 - r * 40 + (((now / 300) & 1) ? 10 : 0), 255, 230);
-  for (int i = 0; i < 2; i++) if (byy[i] >= 0) mBuf[XY(bx[i], byy[i])] = CRGB::White;
-  for (int i = 0; i < 3; i++) if (ey[i] >= 0) mBuf[XY(ex[i], ey[i])] = CRGB(255, 40, 0);
-  for (int d = -1; d <= 1; d++) mBuf[XY(pxi + d, H - 1)] = CRGB(0, 220, 80);
-  mBuf[XY(pxi, H - 2)] = CRGB(0, 140, 50);
-}
 
 static void matFx(uint8_t fx, uint8_t W, uint8_t H, uint16_t N) {
   const uint32_t t = mT; const uint8_t hue = mCfg.hue;
@@ -3185,13 +2868,6 @@ static void matFx(uint8_t fx, uint8_t W, uint8_t H, uint16_t N) {
       mBuf[XY(x + 1, y)] += d; mBuf[XY(x - 1, y)] += d; mBuf[XY(x, y + 1)] += d; mBuf[XY(x, y - 1)] += d;
     } break;
 
-    case MF_SNAKE:    gameSnake(W, H, N); break;
-    case MF_PONG:     gamePong(W, H, N); break;
-    case MF_BREAKOUT: gameBreakout(W, H, N); break;
-    case MF_DODGE:    gameDodge(W, H, N); break;
-    case MF_TETRIS:   gameTetris(W, H, N); break;
-    case MF_FLAPPY:   gameFlappy(W, H, N); break;
-    case MF_INVADERS: gameInvaders(W, H, N); break;
     default:
       if (isWledMat(fx)) wfx::wfxFrame(1, wfx::WFX2D[fx - MF_WLED], mBuf, N, W, H, XY, mCfg.speed, mCfg.hue, millis());
       else if (isGifMat(fx)) gifDraw(fx - MF_GIF0, W, H, (uint32_t)((uint64_t)t * 8 / 9));   // t runs at (speed+16)/128, a GIF should play at its own speed at the default
@@ -3227,13 +2903,13 @@ static void renderFrame(uint32_t dt) {
   const bool pvs = cfgMode && pv && pvS >= 0, pvm = cfgMode && pv && pvM >= 0;
 
   // ---- idle dimming: fade down slowly after DIM_AFTER_MS, come back quickly on any use
-  uint8_t target = (cfgMode || forceWhite || timerState != T_IDLE || swState != SW_IDLE || (matOn && isGameFx(curMFx)) || idleMs() < (int32_t)DIM_AFTER_MS) ? 255 : DIM_LEVEL;
+  uint8_t target = (cfgMode || forceWhite || timerState != T_IDLE || swState != SW_IDLE || idleMs() < (int32_t)DIM_AFTER_MS) ? 255 : DIM_LEVEL;
   if (dimLvl < target)      dimLvl = (target - dimLvl > 25) ? dimLvl + 25 : target;
   else if (dimLvl > target) dimLvl = (dimLvl - target > 2)  ? dimLvl - 2  : target;
   const uint8_t bs = batBrightScale();                  // battery saver: dimmer as the battery gets low
   const uint8_t ns = nightScale(); nightNow = ns;      // night mode
-  uint8_t sB = scale8(scale8(scale8(sCfg.bright, dimLvl), bs), ns); if (!sB) sB = 1;
-  uint8_t mB = scale8(scale8(scale8(mCfg.bright, dimLvl), bs), ns); if (!mB) mB = 1;
+  uint8_t sB = scale8(scale8(scale8(scale8(sCfg.bright, dimLvl), bs), ns), scale8(potAll, potStrip)); if (!sB) sB = 1;
+  uint8_t mB = scale8(scale8(scale8(scale8(mCfg.bright, dimLvl), bs), ns), scale8(potAll, potMat));   if (!mB) mB = 1;
 
   // ---- strip
   uint16_t n = sCfg.count;
@@ -3394,600 +3070,6 @@ static void clockTask(void*) {
   vTaskDelete(nullptr);
 }
 
-// ============================ OLED animations (64x48, drawn straight into the display buffer) ============================
-#if USE_OLED
-static uint8_t* ob = nullptr;            // u8g2 frame buffer: 6 pages of 8 rows, 1 bit per pixel
-static int obw = 64;
-static inline void px(int x, int y)    { if ((unsigned)x < 64u && (unsigned)y < 48u) ob[(y >> 3) * obw + x] |=  (uint8_t)(1 << (y & 7)); }
-static inline void pxOff(int x, int y) { if ((unsigned)x < 64u && (unsigned)y < 48u) ob[(y >> 3) * obw + x] &= (uint8_t)~(1 << (y & 7)); }
-static inline void pxSet(int x, int y, bool on) { if (on) px(x, y); else pxOff(x, y); }
-static uint32_t h32(uint32_t x) { x ^= x >> 16; x *= 0x7feb352dU; x ^= x >> 15; x *= 0x846ca68bU; x ^= x >> 16; return x; }
-
-static void ln(int x0, int y0, int x1, int y1) {                       // clipped line
-  if (abs(x0) > 300 || abs(y0) > 300 || abs(x1) > 300 || abs(y1) > 300) return;
-  int dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1, dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1, e = dx + dy;
-  for (;;) {
-    px(x0, y0);
-    if (x0 == x1 && y0 == y1) break;
-    int e2 = 2 * e;
-    if (e2 >= dy) { e += dy; x0 += sx; }
-    if (e2 <= dx) { e += dx; y0 += sy; }
-  }
-}
-static void hln(int x0, int x1, int y, bool on = true) {
-  if ((unsigned)y >= 48u) return;
-  if (x0 > x1) { int t = x0; x0 = x1; x1 = t; }
-  if (x0 < 0) x0 = 0;
-  if (x1 > 63) x1 = 63;
-  for (int x = x0; x <= x1; x++) pxSet(x, y, on);
-}
-static void fbox(int x, int y, int w, int h, bool on = true) { for (int j = 0; j < h; j++) hln(x, x + w - 1, y + j, on); }
-static void rframe(int x, int y, int w, int h) {
-  hln(x, x + w - 1, y); hln(x, x + w - 1, y + h - 1);
-  for (int j = 0; j < h; j++) { px(x, y + j); px(x + w - 1, y + j); }
-}
-static void circ(int cx, int cy, int r) {
-  int x = r, y = 0, e = 1 - r;
-  while (x >= y) {
-    px(cx + x, cy + y); px(cx + y, cy + x); px(cx - y, cy + x); px(cx - x, cy + y);
-    px(cx - x, cy - y); px(cx - y, cy - x); px(cx + y, cy - x); px(cx + x, cy - y);
-    y++;
-    if (e < 0) e += 2 * y + 1; else { x--; e += 2 * (y - x) + 1; }
-  }
-}
-static void fell(int cx, int cy, int rx, int ry, bool on = true) {      // filled ellipse
-  if (ry <= 0) { hln(cx - rx, cx + rx, cy, on); return; }
-  for (int dy = -ry; dy <= ry; dy++) {
-    float f = 1.0f - (float)(dy * dy) / (float)(ry * ry);
-    int hw = (int)(rx * sqrtf(f > 0 ? f : 0) + 0.5f);
-    hln(cx - hw, cx + hw, cy + dy, on);
-  }
-}
-static void disc(int cx, int cy, int r, bool on = true) { fell(cx, cy, r, r, on); }
-
-// ---- small scenes
-static void drawRocket(int cx, int yb, int flame) {                     // yb = bottom of the rocket
-  for (int j = 0; j < 5; j++) { int hw = j * 3 / 4; hln(cx - hw, cx + hw, yb - 19 + j); }   // nose
-  fbox(cx - 3, yb - 14, 7, 12);                                          // body
-  disc(cx, yb - 10, 1, false);                                           // window
-  for (int j = 0; j < 4; j++) { px(cx - 4, yb - 1 - j); px(cx + 4, yb - 1 - j); }          // fins
-  px(cx - 5, yb - 1); px(cx - 5, yb - 2); px(cx + 5, yb - 1); px(cx + 5, yb - 2);
-  hln(cx - 2, cx + 2, yb - 2);
-  for (int k = 0; k < flame; k++) {                                       // flickering flame
-    int w = 2 - k / 3; if (w < 0) w = 0;
-    for (int x = cx - w; x <= cx + w; x++) if (random8() < 190) px(x, yb - 1 + k);
-  }
-}
-static void drawFish(int x, int y, int dir, int rx) {
-  int ry = rx * 3 / 5;
-  fell(x, y, rx, ry);
-  int tx = x - dir * (rx + 1);
-  ln(tx, y, tx - dir * 3, y - 3); ln(tx, y, tx - dir * 3, y + 3); ln(tx - dir * 3, y - 3, tx - dir * 3, y + 3);
-  pxOff(x + dir * (rx - 2), y - 1);                                       // eye
-}
-
-static void drawAnim(uint8_t a, uint32_t t) {
-  static uint8_t cur = 255; static uint32_t lastT = 0;
-  const bool init = (a != cur);
-  cur = a;
-  float dt = init ? 1.0f : (t - lastT) / 33.0f;
-  if (dt > 3.0f) dt = 3.0f;
-  lastT = t;
-  ob = oled.getBufferPtr(); obw = oled.getBufferTileWidth() * 8;
-
-  switch (a) {
-    case OA_STRIPES: {                                                   // diagonal stripes, width breathes
-      int off = (t / 30) & 15, w = 3 + (sin8((uint8_t)(t / 40)) >> 6);
-      for (int y = 0; y < 48; y++) for (int x = 0; x < 64; x++) if (((x + y + off) & 15) < w) px(x, y);
-    } break;
-
-    case OA_RAIN: {                                                      // falling streaks
-      static float ry[16], rv[16]; static uint8_t rl[16];
-      for (int i = 0; i < 16; i++) {
-        if (init) { ry[i] = -(float)random8(48); rv[i] = 0.8f + random8() / 128.0f; rl[i] = 4 + random8(10); }
-        ry[i] += rv[i] * dt;
-        if (ry[i] - rl[i] > 48) { ry[i] = -(float)random8(20); rv[i] = 0.8f + random8() / 128.0f; rl[i] = 4 + random8(10); }
-        int x = i * 4 + 1, y = (int)ry[i];
-        for (int k = 0; k < rl[i]; k++) if (k < rl[i] / 2 || ((y - k) & 1)) px(x, y - k);
-      }
-    } break;
-
-    case OA_STARS: {                                                     // flying through stars
-      static float sx[40], sy[40], sz[40];
-      for (int i = 0; i < 40; i++) {
-        if (init) { sx[i] = ((int)random16(2000) - 1000) / 1000.0f; sy[i] = ((int)random16(2000) - 1000) / 1000.0f; sz[i] = 0.1f + random8() / 280.0f; }
-        sz[i] -= 0.012f * dt;
-        int X = 32 + (int)(sx[i] / (sz[i] > 0.02f ? sz[i] : 0.02f) * 20), Y = 24 + (int)(sy[i] / (sz[i] > 0.02f ? sz[i] : 0.02f) * 20);
-        if (sz[i] <= 0.05f || X < 0 || X > 63 || Y < 0 || Y > 47) {
-          sx[i] = ((int)random16(2000) - 1000) / 1000.0f; sy[i] = ((int)random16(2000) - 1000) / 1000.0f; sz[i] = 1.0f;
-          continue;
-        }
-        px(X, Y);
-        if (sz[i] < 0.3f) { px(X + 1, Y); px(X, Y + 1); px(X + 1, Y + 1); }
-      }
-    } break;
-
-    case OA_CUBE: {                                                      // rotating wireframe cube
-      static const int8_t V[8][3] = {{-1,-1,-1},{1,-1,-1},{1,1,-1},{-1,1,-1},{-1,-1,1},{1,-1,1},{1,1,1},{-1,1,1}};
-      static const uint8_t E[12][2] = {{0,1},{1,2},{2,3},{3,0},{4,5},{5,6},{6,7},{7,4},{0,4},{1,5},{2,6},{3,7}};
-      float A = t * 0.0011f, B = t * 0.0007f, C = t * 0.0005f;
-      float ca = cosf(A), sa = sinf(A), cb = cosf(B), sb = sinf(B), cc = cosf(C), sc = sinf(C);
-      int P[8][2];
-      for (int i = 0; i < 8; i++) {
-        float x = V[i][0], y = V[i][1], z = V[i][2], t1;
-        t1 = y * ca - z * sa; z = y * sa + z * ca; y = t1;               // around X
-        t1 = x * cb + z * sb; z = -x * sb + z * cb; x = t1;              // around Y
-        t1 = x * cc - y * sc; y = x * sc + y * cc; x = t1;               // around Z
-        z += 4.0f;
-        P[i][0] = 32 + (int)(x * 30.0f / z); P[i][1] = 24 + (int)(y * 30.0f / z);
-      }
-      for (auto& e : E) ln(P[e[0]][0], P[e[0]][1], P[e[1]][0], P[e[1]][1]);
-    } break;
-
-    case OA_WAVES:                                                       // three sine waves
-      for (int k = 0; k < 3; k++) {
-        int py = 0;
-        for (int x = 0; x < 64; x++) {
-          int y = 24 + (int)(sinf(x * 0.12f + t * 0.003f * (k + 1) + k * 2.1f) * (6 + k * 5));
-          if (x) ln(x - 1, py, x, y); else px(x, y);
-          py = y;
-        }
-      }
-      break;
-
-    case OA_BOUNCE: {                                                    // bouncing balls with gravity
-      static float bx[4], by[4], vx[4], vy[4]; static uint8_t br[4];
-      for (int i = 0; i < 4; i++) {
-        if (init) { br[i] = 3 + (i & 1) * 2; bx[i] = 8 + i * 14; by[i] = 6 + random8(20); vx[i] = (random8(2) ? 1 : -1) * (0.6f + random8() / 300.0f); vy[i] = 0; }
-        vy[i] += 0.15f * dt; bx[i] += vx[i] * dt; by[i] += vy[i] * dt;
-        int r = br[i];
-        if (bx[i] < r)      { bx[i] = r;      vx[i] = -vx[i]; }
-        if (bx[i] > 63 - r) { bx[i] = 63 - r; vx[i] = -vx[i]; }
-        if (by[i] > 47 - r) { by[i] = 47 - r; vy[i] = -vy[i] * 0.92f; if (fabsf(vy[i]) < 1.5f) vy[i] = -(3.0f + random8(3)); }
-        if (i & 1) disc((int)bx[i], (int)by[i], r); else circ((int)bx[i], (int)by[i], r);
-      }
-    } break;
-
-    case OA_LIFE: {                                                      // Game of Life, 32x24 cells of 2x2 px
-      static uint8_t g[24][32], n2[24][32]; static uint32_t lastStep = 0; static uint16_t gen = 0;
-      auto seed = [&]() { for (int y = 0; y < 24; y++) for (int x = 0; x < 32; x++) g[y][x] = random8() < 70; gen = 0; };
-      if (init) seed();
-      if (t - lastStep >= 120) {
-        lastStep = t;
-        uint16_t alive = 0; bool same = true;
-        for (int y = 0; y < 24; y++) for (int x = 0; x < 32; x++) {
-          int n = 0;
-          for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++)
-            if (dx || dy) n += g[(y + dy + 24) % 24][(x + dx + 32) % 32];
-          uint8_t c = g[y][x], nw = (c && (n == 2 || n == 3)) || (!c && n == 3);
-          n2[y][x] = nw; alive += nw; if (nw != c) same = false;
-        }
-        memcpy(g, n2, sizeof g); gen++;
-        if (alive < 5 || same || gen > 300) seed();
-      }
-      for (int y = 0; y < 24; y++) for (int x = 0; x < 32; x++) if (g[y][x]) fbox(x * 2, y * 2, 2, 2);
-    } break;
-
-    case OA_SNOW: {                                                      // snow that piles up, then melts
-      static float fx[40], fy[40]; static uint8_t heap[64];
-      if (init) { memset(heap, 0, sizeof heap); for (int i = 0; i < 40; i++) { fx[i] = random8(64); fy[i] = -(float)random8(48); } }
-      uint16_t sum = 0;
-      for (int x = 0; x < 64; x++) sum += heap[x];
-      if (sum > 64 * 12) memset(heap, 0, sizeof heap);
-      for (int i = 0; i < 40; i++) {
-        fy[i] += (0.35f + (i % 3) * 0.2f) * dt;
-        fx[i] += sinf(t * 0.002f + i) * 0.3f * dt;
-        if (fx[i] < 0) fx[i] += 64;
-        if (fx[i] >= 64) fx[i] -= 64;
-        int x = (int)fx[i];
-        if (fy[i] >= 47 - heap[x]) {
-          if (x > 0 && heap[x] > heap[x - 1] + 1) x--;
-          else if (x < 63 && heap[x] > heap[x + 1] + 1) x++;
-          if (heap[x] < 30) heap[x]++;
-          fx[i] = random8(64); fy[i] = -(float)random8(10);
-          continue;
-        }
-        px(x, (int)fy[i]);
-        if (i % 5 == 0) px(x + 1, (int)fy[i]);
-      }
-      for (int x = 0; x < 64; x++) for (int k = 0; k < heap[x]; k++) px(x, 47 - k);
-    } break;
-
-    case OA_TUNNEL:                                                      // zooming rectangles
-      for (int k = 0; k < 6; k++) {
-        int p = (int)((t / 18 + k * 12) % 72), hw = p * 34 / 72, hh = hw * 26 / 34;
-        if (hw > 1) rframe(32 - hw, 24 - hh, hw * 2, hh * 2);
-      }
-      ln(0, 0, 28, 21); ln(63, 0, 35, 21); ln(0, 47, 28, 26); ln(63, 47, 35, 26);
-      break;
-
-    case OA_EYES: {                                                      // two eyes looking around and blinking
-      static float ex = 0, ey = 0, tx = 0, ty = 0; static uint32_t nextMove = 0, nextBlink = 0, blinkStart = 0;
-      if (init) { nextMove = t; nextBlink = t + 2000; }
-      if (t >= nextMove)  { tx = (int)random8(13) - 6; ty = (int)random8(9) - 4; nextMove = t + 600 + random16(1800); }
-      if (t >= nextBlink) { blinkStart = t; nextBlink = t + 2000 + random16(3000); }
-      ex += (tx - ex) * 0.25f * dt; ey += (ty - ey) * 0.25f * dt;
-      if (ex > 6) ex = 6;
-      if (ex < -6) ex = -6;
-      const bool closed = t - blinkStart < 140;
-      for (int cx : {17, 47}) {
-        if (closed) { hln(cx - 12, cx + 12, 24); hln(cx - 12, cx + 12, 25); continue; }
-        circ(cx, 24, 13); circ(cx, 24, 12);
-        int qx = cx + (int)ex, qy = 24 + (int)ey;
-        disc(qx, qy, 5);
-        pxOff(qx - 2, qy - 2); pxOff(qx - 1, qy - 2); pxOff(qx - 2, qy - 1);   // shine
-      }
-    } break;
-
-    case OA_ROCKET: {                                                    // short movie: launch, then flight through space (9 s loop)
-      uint32_t m = t % 9000;
-      for (int i = 0; i < 18; i++) {                                      // stars
-        int sx = (int)(h32(i * 2 + 7) % 64), sy = (int)(h32(i * 2 + 8) % 40);
-        if (m >= 4500) sy = (int)((sy + (m - 4500) / 8) % 48);
-        if (((t / 200) + i) % 7) px(sx, sy);
-      }
-      if (m < 4500) {
-        hln(0, 63, 44);                                                   // ground + launch pad
-        fbox(25, 42, 14, 2);
-        int yb = 41, flame = 1 + random8(2);
-        if (m > 1500) {
-          float d = (m - 1500) / 1000.0f;
-          yb = 41 - (int)(d * d * 12);
-          flame = 4 + random8(5);
-          int grow = (int)((m - 1500) / 200); if (grow > 9) grow = 9;     // smoke clouds billowing out
-          static const int8_t SX[5] = {-15, -8, 0, 8, 15}, SR[5] = {4, 6, 7, 6, 4};
-          for (int k = 0; k < 5; k++) {
-            int r = SR[k] * grow / 9; if (r < 1) continue;
-            int cx = 32 + SX[k] * grow / 9;
-            disc(cx, 44 - r, r); disc(cx, 44 - r, r - 1, false);           // outlined puff
-          }
-        }
-        drawRocket(32, yb, flame);
-      } else {
-        int py = -10 + (int)((m - 4500) / 60);                           // planet passing by
-        circ(12, py, 8); hln(2, 22, py + 2);
-        drawRocket(40, 34 + (((t / 150) & 1) ? 1 : 0), 4 + random8(5));
-      }
-    } break;
-
-    case OA_DRIVE: {                                                     // short movie: car driving through a city at night
-      disc(54, 7, 5); disc(56, 6, 5, false);                             // moon
-      for (int i = 0; i < 6; i++) px((i * 29 + 3) % 40, (i * 7 + 2) % 12);
-      uint32_t scroll = t / 45;
-      for (int i = (int)(scroll / 11) - 1; i <= (int)(scroll / 11) + 7; i++) {
-        int x = i * 11 - (int)scroll, h = 8 + (int)(h32(i) % 16), top = 36 - h;
-        rframe(x, top, 10, h + 1);
-        for (int wy = top + 2; wy < 34; wy += 3)
-          for (int wx = x + 2; wx < x + 8; wx += 3)
-            if (h32(i * 131 + wy * 7 + wx) % 3 == 0) { px(wx, wy); px(wx + 1, wy); }
-      }
-      hln(0, 63, 37);                                                     // road
-      for (int x = 0; x < 64; x++) if (((x + t / 12) % 10) < 5) px(x, 42);
-      hln(0, 63, 47);
-      int b = (t / 120) & 1;                                              // car, bobbing a little
-      fbox(10, 36 + b, 24, 5);
-      for (int j = 0; j < 4; j++) hln(16 - j, 27 + j, 32 + j + b);
-      fbox(17, 33 + b, 4, 2, false); fbox(23, 33 + b, 4, 2, false);       // windows
-      for (int wx : {15, 29}) {                                           // wheels with a turning spoke
-        disc(wx, 42, 3); pxOff(wx, 42);
-        float an = t * 0.02f; pxOff(wx + (int)(cosf(an) * 2), 42 + (int)(sinf(an) * 2));
-      }
-      for (int k = 0; k < 8; k++) if ((k + t / 60) % 2) px(36 + k * 3, 38 + b + k / 3);   // headlight beam
-    } break;
-
-    case OA_FISH: {                                                      // fish tank
-      static float fxp[3], fyp[3], fv[3]; static float bbx[6], bby[6];
-      if (init) {
-        for (int i = 0; i < 3; i++) { fxp[i] = random8(64); fyp[i] = 10 + random8(24); fv[i] = (random8(2) ? 1 : -1) * (0.4f + random8() / 500.0f); }
-        for (int i = 0; i < 6; i++) { bbx[i] = 44 + random8(6); bby[i] = 47 - random8(48); }
-      }
-      for (int x = 0; x < 64; x++) { px(x, 47); if (h32(x) % 3 == 0) px(x, 46); }   // sand
-      for (int s = 0; s < 3; s++) {                                       // seaweed
-        int base = 8 + s * 23, len = 14 + s * 3;
-        for (int k = 0; k < len; k++) px(base + (int)(sinf(k * 0.3f + t * 0.003f + s) * 2), 46 - k);
-      }
-      for (int i = 0; i < 3; i++) {
-        fxp[i] += fv[i] * dt;
-        if (fxp[i] < -12 || fxp[i] > 76) { fv[i] = -fv[i]; fyp[i] = 8 + random8(26); }
-        drawFish((int)fxp[i], (int)(fyp[i] + sinf(t * 0.003f + i) * 1.5f), fv[i] > 0 ? 1 : -1, 4 + i);
-      }
-      for (int i = 0; i < 6; i++) {                                       // bubbles
-        bby[i] -= 0.5f * dt; bbx[i] += sinf(t * 0.005f + i) * 0.2f;
-        if (bby[i] < -2) { bbx[i] = 44 + random8(6); bby[i] = 46; }
-        circ((int)bbx[i], (int)bby[i], (i % 2) + 1);
-      }
-    } break;
-  }
-}
-#endif
-
-// ============================ OLED movies ============================
-// Four short movies played one after another. Each one: animated title card (border draws itself,
-// "MOVIE n" and the title are typed, then an iris opens on the first scene), the story, then the
-// ending (iris closes, "THE END" is typed, the screen dissolves) and the next movie starts.
-#if USE_OLED
-static void typeStr(int x, int y, const char* s, int n, bool cursor) {   // first n characters + blinking cursor
-  char b[16]; int len = (int)strlen(s); if (n > len) n = len; if (n < 0) n = 0; if (n > 15) n = 15;
-  memcpy(b, s, n); b[n] = 0;
-  oled.drawStr(x, y, b);
-  if (cursor) { int cx = x + oled.getStrWidth(b); oled.drawBox(cx + 1, y - 1, oled.getMaxCharWidth() - 2, 2); }
-}
-static void irisMask(int r) {                                            // clear everything outside a circle
-  for (int y = 0; y < 48; y++) for (int x = 0; x < 64; x++) {
-    int dx = x - 32, dy = y - 24;
-    if (dx * dx + dy * dy > r * r) pxOff(x, y);
-  }
-  if (r > 0 && r < 42) circ(32, 24, r);
-}
-static void drawStars(uint8_t n, int shift, uint32_t t, int maxY = 48) {
-  for (int i = 0; i < n; i++) {
-    int sx = (int)(h32(i * 2 + 7) % 64), sy = (int)((h32(i * 2 + 8) % maxY + shift) % maxY);
-    if (((t / 200) + i) % 7) px(sx, sy);
-  }
-}
-static void drawTree(int x, int base) {
-  ln(x, base, x, base - 3);
-  for (int j = 0; j < 8; j++) { int hw = (7 - j) / 2; hln(x - hw, x + hw, base - 4 - j); }
-}
-static void drawHouse(int x, int base, bool lit, uint32_t t) {
-  rframe(x, base - 12, 18, 13);
-  for (int j = 0; j < 10; j++) { if (x + 18 - j < x - 1 + j) break; hln(x - 1 + j, x + 18 - j, base - 13 - j); }
-  fbox(x + 13, base - 20, 3, 5);                                           // chimney
-  rframe(x + 3, base - 6, 4, 7);                                           // door
-  if (lit) fbox(x + 10, base - 9, 5, 4); else rframe(x + 10, base - 9, 5, 4);
-  if (lit) for (int k = 0; k < 3; k++) {                                   // chimney smoke
-    int ph = (int)((t / 40 + k * 15) % 45);
-    circ(x + 14 + ph / 10, base - 22 - ph / 3, 1 + ph / 20);
-  }
-}
-static void drawCar(int b, bool moving, uint32_t t, bool lights) {
-  fbox(10, 36 + b, 24, 5);
-  for (int j = 0; j < 4; j++) hln(16 - j, 27 + j, 32 + j + b);
-  fbox(17, 33 + b, 4, 2, false); fbox(23, 33 + b, 4, 2, false);
-  for (int wx : {15, 29}) {
-    disc(wx, 42, 3); pxOff(wx, 42);
-    float an = (moving ? t : 0) * 0.02f; pxOff(wx + (int)(cosf(an) * 2), 42 + (int)(sinf(an) * 2));
-  }
-  if (lights) for (int k = 0; k < 8; k++) if ((k + t / 60) % 2) px(36 + k * 3, 38 + b + k / 3);
-}
-static void drawHeart(int x, int y) {
-  static const uint8_t H[6] = {0x36, 0x7F, 0x7F, 0x3E, 0x1C, 0x08};       // 7x6
-  for (int r = 0; r < 6; r++) for (int c = 0; c < 7; c++) if (H[r] & (0x40 >> c)) px(x + c, y + r);
-}
-static void smallText(int x, int y, const char* s) { oled.setFont(u8g2_font_5x8_tr); oled.drawStr(x, y, s); }
-
-// ---- Movie 1: MOON TRIP  (countdown, launch, space, landing on the moon, flag)
-static void mvMoon(uint32_t ms, bool) {
-  int shift = 0;
-  if (ms >= 4800 && ms < 9800) shift = (int)((ms - 4800) / 8);
-  else if (ms >= 9800) shift = 625 + (int)((ms - 9800) / 60);
-  drawStars(20, ms < 4800 ? 0 : shift, ms, ms < 4800 ? 40 : 48);
-  if (ms < 4800) {
-    hln(0, 63, 44); fbox(25, 42, 14, 2);
-    int yb = 41, flame = 1 + random8(2);
-    if (ms < 1800) {                                                      // 3, 2, 1
-      char c[2] = {(char)('3' - ms / 600), 0};
-      oled.setFont(u8g2_font_7x13B_tr); oled.drawStr(50, 20, c);
-    } else {
-      float d = (ms - 1800) / 1000.0f;
-      yb = 41 - (int)(d * d * 12); flame = 4 + random8(5);
-      int grow = (int)((ms - 1800) / 200); if (grow > 9) grow = 9;
-      static const int8_t SX[5] = {-15, -8, 0, 8, 15}, SR[5] = {4, 6, 7, 6, 4};
-      for (int k = 0; k < 5; k++) {
-        int r = SR[k] * grow / 9; if (r < 1) continue;
-        int cx = 32 + SX[k] * grow / 9;
-        disc(cx, 44 - r, r); disc(cx, 44 - r, r - 1, false);
-      }
-    }
-    drawRocket(32, yb, flame);
-  } else if (ms < 9800) {
-    int py = -10 + (int)((ms - 4800) / 60);                               // planet passing by
-    circ(12, py, 8); hln(2, 22, py + 2);
-    drawRocket(32, 34 + (((ms / 150) & 1) ? 1 : 0), 4 + random8(5));
-  } else {
-    uint32_t e = ms - 9800;
-    int sy = 48 - (int)((e < 1500 ? e : 1500) * 12 / 1500);              // moon surface comes up to y 36
-    circ(10, 8, 4); hln(8, 10, 7); hln(9, 12, 9);                          // the earth, far away
-    int yb, flame;
-    if (e < 1000)      { yb = 34; flame = 4 + random8(4); }
-    else if (e < 3000) { float f = (e - 1000) / 2000.0f; f = f * (2 - f); yb = 34 + (int)((sy - 34) * f); flame = 2 + random8(4); }
-    else               { yb = sy; flame = 0; }
-    drawRocket(32, yb, flame);
-    fbox(0, sy + 1, 64, 48 - sy - 1, false);
-    hln(0, 63, sy);
-    for (int y = sy + 1; y < 48; y++) for (int x = 0; x < 64; x++) if (((x * 3 + y * 5) % 7) == 0) px(x, y);
-    fell(12, sy + 5, 4, 2); fell(12, sy + 5, 3, 1, false);               // craters
-    fell(54, sy + 7, 5, 2); fell(54, sy + 7, 4, 1, false);
-    if (e > 2600 && e < 3600) { int r = (int)((e - 2600) / 150); circ(26 - r, sy - 1, 1); circ(38 + r, sy - 1, 1); }   // dust
-    if (e > 3800) {                                                       // flag goes up and waves
-      int h = (int)((e - 3800) / 60); if (h > 10) h = 10;
-      int fy = sy - h;
-      ln(48, sy, 48, fy);
-      if (h >= 10) { fbox(49, fy, 7, 4); if ((ms / 250) & 1) pxOff(55, fy + 3); else pxOff(55, fy); }
-    }
-  }
-}
-
-// ---- Movie 2: NIGHT RUN  (drive out of the city, past the trees, home; the light goes on, Zz)
-static void mvNight(uint32_t ms, bool) {
-  disc(54, 7, 5); disc(56, 6, 5, false);
-  for (int i = 0; i < 6; i++) px((i * 29 + 3) % 40, (i * 7 + 2) % 12);
-  const bool moving = ms < 11000;
-  const uint32_t mv = moving ? ms : 11000;
-  const int scroll = (int)(mv / 45);
-  for (int i = 0; i < 12; i++) {                                           // city
-    int x = i * 11 - scroll; if (x > 64 || x < -12) continue;
-    int h = 8 + (int)(h32(i) % 16), top = 36 - h;
-    rframe(x, top, 10, h + 1);
-    for (int wy = top + 2; wy < 34; wy += 3) for (int wx = x + 2; wx < x + 8; wx += 3)
-      if (h32(i * 131 + wy * 7 + wx) % 3 == 0) { px(wx, wy); px(wx + 1, wy); }
-  }
-  for (int x = 0; x < 64; x++) { int wx = x + scroll; if (wx > 135) px(x, 30 + (int)(sinf(wx * 0.05f) * 3)); }   // hills
-  for (int k = 0; k < 7; k++) { int x = 150 + k * 18 - scroll; if (x > -8 && x < 72) drawTree(x, 36); }        // trees
-  drawHouse(290 - scroll, 36, ms > 12500, ms);
-  hln(0, 63, 37);
-  uint32_t dd = mv / 12;
-  for (int x = 0; x < 64; x++) if (((x + dd) % 10) < 5) px(x, 42);
-  hln(0, 63, 47);
-  drawCar(moving ? (int)((ms / 120) & 1) : 0, moving, mv, ms < 12000);
-  if (ms > 14000) {                                                         // Zz from the window
-    uint32_t z = ms - 14000;
-    smallText(40 + (int)(z / 300), 22 - (int)(z / 250), "z");
-    if (z > 600) smallText(44 + (int)((z - 600) / 300), 18 - (int)((z - 600) / 250), "Z");
-  }
-}
-
-// ---- Movie 3: FISH TALE  (small fish, big fish chases it, it hides in the seaweed, big fish gives up)
-static void mvFish(uint32_t ms, bool init) {
-  static float bbx[5], bby[5];
-  if (init) for (int i = 0; i < 5; i++) { bbx[i] = 10 + random8(40); bby[i] = 47 - random8(48); }
-  for (int x = 0; x < 64; x++) { px(x, 47); if (h32(x) % 3 == 0) px(x, 46); }
-  for (int s = 0; s < 2; s++) { int base = 6 + s * 10; for (int k = 0; k < 14; k++) px(base + (int)(sinf(k * 0.3f + ms * 0.003f + s) * 2), 46 - k); }
-  for (int i = 0; i < 5; i++) {
-    bby[i] -= 0.5f; bbx[i] += sinf(ms * 0.005f + i) * 0.2f;
-    if (bby[i] < -2) { bbx[i] = 10 + random8(40); bby[i] = 46; }
-    circ((int)bbx[i], (int)bby[i], 1);
-  }
-  // small fish
-  float sx, sy; int sd = 1;
-  if (ms < 4000)       { sx = -6 + 34 * ms / 4000.0f; sy = 24; }
-  else if (ms < 5000)  { sx = 28; sy = 24; sd = -1; }
-  else if (ms < 6500)  { float f = (ms - 5000) / 1500.0f; sx = 28 + 25 * f; sy = 24 + 6 * f; }
-  else if (ms < 12500) { sx = 53; sy = 30; }
-  else if (ms < 14500) { float f = (ms - 12500) / 2000.0f; sx = 53 - 17 * f; sy = 30 - 6 * f; sd = -1; }
-  else                 { sx = 36 + sinf((ms - 14500) * 0.004f) * 6; sy = 24; sd = cosf((ms - 14500) * 0.004f) > 0 ? 1 : -1; }
-  sy += sinf(ms * 0.004f) * 1.0f;
-  drawFish((int)sx, (int)sy, sd, 3);
-  // big fish
-  if (ms >= 4000 && ms < 13000) {
-    float bx; int bd = 1;
-    if (ms < 8000)       bx = -20 + 50 * (ms - 4000) / 4000.0f;
-    else if (ms < 10500) bx = 30;
-    else               { bx = 30 - 55 * (ms - 10500) / 2500.0f; bd = -1; }
-    drawFish((int)bx, 20 + (int)(sinf(ms * 0.003f) * 2), bd, 8);
-    if (ms > 8500 && ms < 10500) smallText((int)bx - 2, 9, "?");
-  }
-  // seaweed clump (in front, so the small fish can hide behind it)
-  for (int s = 0; s < 6; s++) {
-    int base = 48 + s * 2;
-    for (int k = 0; k < 22; k++) {
-      int x = base + (int)(sinf(k * 0.35f + ms * 0.003f + s) * 2);
-      px(x, 46 - k); if (k < 18) px(x + 1, 46 - k);
-    }
-  }
-  if (ms > 4300 && ms < 5300) smallText((int)sx - 1, (int)sy - 6, "!");
-  if (ms > 14500) drawHeart((int)sx - 3, (int)sy - 13);
-}
-
-// ---- Movie 4: SNOW DAY  (snow falls, a snowman builds itself, the sun comes out, it waves)
-static void mvSnow(uint32_t ms, bool init) {
-  static float fx[30], fy[30]; static uint8_t heap[64];
-  if (init) { memset(heap, 0, sizeof heap); for (int i = 0; i < 30; i++) { fx[i] = random8(64); fy[i] = -(float)random8(48); } }
-  int active = ms < 8000 ? 30 : 30 - (int)((ms - 8000) / 100); if (active < 0) active = 0;
-  for (int i = 0; i < 30; i++) {
-    if (i >= active && fy[i] < 0) continue;                             // snow slowly stops
-    fy[i] += 0.35f + (i % 3) * 0.2f;
-    fx[i] += sinf(ms * 0.002f + i) * 0.3f;
-    if (fx[i] < 0) fx[i] += 64;
-    if (fx[i] >= 64) fx[i] -= 64;
-    int x = (int)fx[i];
-    if (fy[i] >= 46 - heap[x]) {
-      if (heap[x] < 5) heap[x]++;
-      fx[i] = random8(64); fy[i] = i < active ? -(float)random8(10) : -100;
-      continue;
-    }
-    px(x, (int)fy[i]);
-  }
-  for (int x = 0; x < 64; x++) for (int k = 0; k <= heap[x]; k++) px(x, 47 - k);
-  if (ms > 8500) {                                                        // sun rises with turning rays
-    int cy = -8 + (int)((ms - 8500 < 1500 ? ms - 8500 : 1500) * 16 / 1500);
-    disc(8, cy, 4);
-    for (int k = 0; k < 8; k++) {
-      float a = k * 0.785f + ms * 0.002f;
-      ln(8 + (int)(cosf(a) * 6), cy + (int)(sinf(a) * 6), 8 + (int)(cosf(a) * 9), cy + (int)(sinf(a) * 9));
-    }
-  }
-  auto grow = [&](uint32_t from, uint32_t dur, int r) { if (ms < from) return 0; uint32_t e = ms - from; return e >= dur ? r : (int)(r * e / dur); };
-  int r1 = grow(2500, 1500, 8), r2 = grow(4000, 1500, 6), r3 = grow(5500, 1000, 4);
-  if (r1) disc(32, 37, r1);
-  if (r2) disc(32, 24, r2);
-  if (r3) disc(32, 14, r3);
-  if (ms > 6500) { pxOff(30, 13); pxOff(34, 13); pxOff(32, 15); ln(33, 15, 37, 16); }      // eyes, carrot nose
-  if (ms > 7000) { pxOff(32, 22); pxOff(32, 26); pxOff(32, 34); pxOff(32, 38); }          // buttons
-  if (ms > 7500) ln(26, 24, 18, 19);                                                       // left arm
-  if (ms > 7500) {                                                                          // right arm (waves later)
-    float a = -0.6f + (ms > 11000 ? sinf(ms * 0.01f) * 0.6f : 0);
-    ln(38, 24, 38 + (int)(cosf(a) * 9), 24 + (int)(sinf(a) * 9));
-  }
-  if (ms > 8000) { hln(27, 37, 9); fbox(29, 4, 7, 5); }                                    // hat
-  if (ms > 11000) { pxOff(30, 16); pxOff(31, 17); pxOff(32, 17); pxOff(33, 17); pxOff(34, 16); }   // smile
-}
-
-struct MovieDef { const char* title; uint16_t len; void (*scene)(uint32_t, bool); };
-static const MovieDef MOVIES[] = {
-  {"MOON TRIP", 16000, mvMoon}, {"NIGHT RUN", 16000, mvNight}, {"FISH TALE", 16000, mvFish}, {"SNOW DAY", 15000, mvSnow}};
-constexpr uint8_t N_MOVIES = sizeof(MOVIES) / sizeof(MOVIES[0]);
-constexpr uint32_t OPEN_MS = 3400, END_MS = 3000;
-
-static void drawMovies(uint32_t now) {
-  static uint32_t clk = 0, lastNow = 0; static uint8_t mi = 0, sceneOf = 255; static bool started = false;
-  uint32_t dt = now - lastNow; lastNow = now;
-  if (!started || dt > 300) dt = 33;               // after a popup or another screen: carry on where it was
-  started = true;
-  clk += dt;
-  while (clk >= OPEN_MS + MOVIES[mi].len + END_MS) { clk -= OPEN_MS + MOVIES[mi].len + END_MS; mi = (mi + 1) % N_MOVIES; }
-  const MovieDef& M = MOVIES[mi];
-  ob = oled.getBufferPtr(); obw = oled.getBufferTileWidth() * 8;
-  oled.setFontMode(1); oled.setDrawColor(1);
-  auto scene = [&](uint32_t ms) { bool init = (sceneOf != mi); sceneOf = mi; M.scene(ms, init); };
-
-  if (clk < OPEN_MS) {                             // ---- opening
-    uint32_t e = clk;
-    if (e < 2800) {
-      int n = (int)((e > 700 ? 700 : e) * 220 / 700);                      // border draws itself
-      for (int k = 0; k < n; k++) {
-        if (k < 64) px(k, 0); else if (k < 111) px(63, k - 63); else if (k < 174) px(173 - k, 47); else px(0, 220 - k);
-      }
-      char top[10]; snprintf(top, sizeof top, "MOVIE %d", mi + 1);
-      oled.setFont(u8g2_font_5x8_tr);
-      int tw = oled.getStrWidth(top);
-      if (e > 500) typeStr((64 - tw) / 2, 12, top, (int)((e - 500) / 70), false);
-      oled.setFont(u8g2_font_7x13B_tr);
-      int w = oled.getStrWidth(M.title);
-      if (e > 1100) {
-        int n2 = (int)((e - 1100) / 110);
-        typeStr((64 - w) / 2, 32, M.title, n2, ((e / 250) & 1) && e < 2700);
-      }
-      if (e > 2200) { int u = (int)((e - 2200) / 15); if (u > 24) u = 24; hln(32 - u, 32 + u, 36); }
-    } else {
-      scene(0);
-      irisMask((int)((e - 2800) * 42 / 600));                              // iris opens on the first scene
-    }
-  } else if (clk < OPEN_MS + M.len) {              // ---- the movie
-    scene(clk - OPEN_MS);
-  } else {                                          // ---- ending
-    uint32_t e = clk - OPEN_MS - M.len;
-    if (e < 700) {
-      scene(M.len + e);
-      irisMask(42 - (int)(e * 42 / 700));                                  // iris closes
-    } else {
-      oled.setFont(u8g2_font_7x13B_tr);
-      int w = oled.getStrWidth("THE END");
-      typeStr((64 - w) / 2, 28, "THE END", e > 800 ? (int)((e - 800) / 120) : 0, ((e / 250) & 1) && e < 2000);
-      if (e > 1700) { int u = (int)((e - 1700) / 15); if (u > 26) u = 26; hln(32 - u, 32 + u, 32); }
-      for (int k = 0; k < 10; k++) {                                       // twinkles around the text
-        uint32_t hsh = h32(k * 977 + e / 150);
-        int x = (int)(hsh % 64), y = (int)((hsh >> 8) % 48);
-        if (y < 12 || y > 36) px(x, y);
-      }
-      if (e > 2400) {                                                       // dissolve away
-        uint32_t lim = e - 2400;
-        for (int y = 0; y < 48; y++) for (int x = 0; x < 64; x++) if (h32(x * 64 + y) % 600 < lim) pxOff(x, y);
-      }
-    }
-  }
-}
-#endif
 
 // ---- Media page: song, artist, play state and volume slider (iPad), or just the media key (other devices)
 #if USE_OLED
@@ -4214,6 +3296,11 @@ static void oledTick() {
     return;
   }
   const bool warn = !cfgMode && sleepAllowed() && idle > (int32_t)(sleepAfterMs() - WARN_MS);
+  {                                                          // OLED brightness = saved value x brightness knob
+    static int16_t lastCon = -1;
+    const int16_t con = scale8(oCfg.bright, scale8(potAll, potOled));
+    if (con != lastCon) { oled.setContrast((uint8_t)con); lastCon = con; }
+  }
   bool wantOff = !warn && (!oledOn || (oCfg.sleepS && idle > (int32_t)oCfg.sleepS * 1000));
   if (wantOff != asleep) { oled.setPowerSave(wantOff ? 1 : 0); asleep = wantOff; }
   if (asleep) return;
@@ -4300,26 +3387,8 @@ static void oledTick() {
   const bool popup = (int32_t)(pagePopupUntil - now) > 0 || (int32_t)(fxPopupUntil - now) > 0;
   const bool normal = !warn && !cfgMode && !popup;
   const int8_t home = oHome;
-  int8_t anim = -1;
-  if (home == HOME_CYCLE) anim = (int8_t)((now / CYCLE_MS) % N_OANIM);
-  else if (home >= 0 && home < (int8_t)N_OANIM) anim = home;
   const bool showClock = normal && home == HOME_CLOCK && haveTime;
   const bool clockMsg  = normal && home == HOME_CLOCK && cCfg.on && !haveTime;   // clock wanted, but no time
-
-  if (normal && (anim >= 0 || home == HOME_MOVIES)) {   // animation or movies: redraw every frame
-    oled.clearBuffer();
-    if (home == HOME_MOVIES) drawMovies(now); else drawAnim((uint8_t)anim, now);
-    if (fnDown) {                                   // FN tag bottom right
-      oled.setFont(u8g2_font_5x8_tr);
-      oled.setDrawColor(0); oled.drawBox(48, 38, 16, 10);
-      oled.setDrawColor(1); oled.drawBox(49, 39, 15, 9);
-      oled.setDrawColor(0); oled.drawStr(51, 47, "FN"); oled.setDrawColor(1);
-    }
-    drawStickDot(now);
-    oled.sendBuffer();
-    memset(prev, 0, sizeof prev);                   // so a page or the clock is drawn fresh afterwards
-    return;
-  }
 
   // Media page: after a media key / song or volume change, or when it is the chosen page
   if (!showClock && !clockMsg && !warn && !cfgMode && (int32_t)(fxPopupUntil - now) <= 0 &&
@@ -4539,6 +3608,7 @@ static bool validateConfig(JsonDocument& d, String& err) {
       if (sw >= 0 && !claimPin(used, sw, err)) return false;
     } else if (t == "pot") {
       if (!claimPin(used, c["pin"] | -1, err, true)) return false;
+      { String bt = c["bt"] | "actions"; if (bt != "actions" && bt != "all" && bt != "strip" && bt != "matrix" && bt != "oled") { err = "Pot: unknown 'controls' value"; return false; } }
     } else if (t == "joystick") {
       if (!claimPin(used, c["x"] | -1, err, true)) return false;
       if (!claimPin(used, c["y"] | -1, err, true)) return false;
@@ -4556,6 +3626,7 @@ static bool validateConfig(JsonDocument& d, String& err) {
 static void clearComponents() {
   for (uint8_t i = 0; i < ncomps; i++) { delete comps[i]; comps[i] = nullptr; }
   ncomps = 0;
+  potAll = potStrip = potMat = potOled = 255;
 }
 
 static uint8_t findFx(const char* (*nameOf)(uint8_t), uint8_t n, const String& s) {
@@ -4589,7 +3660,6 @@ static void applyConfig(JsonDocument& d) {
   mCfg.flipX = (int)(m["flipX"] | 0) != 0;
   mCfg.flipY = (int)(m["flipY"] | 0) != 0;
   strlcpy(matText, m["text"] | "MacroPad", sizeof matText);
-  matGameSpeed = constrain((int)(m["gspeed"] | 3), 1, 10);
   matTextSpeed = constrain((int)(m["tspeed"] | 3), 1, 10);
   matOn = mCfg.w > 0 && mCfg.h > 0;
   gifNamesLoad();
@@ -4654,8 +3724,10 @@ static void applyConfig(JsonDocument& d) {
                                     parsePair(c["cwFn"] | ""), parsePair(c["ccwFn"] | ""), swb);
       addWake(sw);
     } else if (t == "pot") {
+      const String bt = String(c["bt"] | "actions");
+      const uint8_t btn = bt == "all" ? 1 : bt == "strip" ? 2 : bt == "matrix" ? 3 : bt == "oled" ? 4 : 0;
       comps[ncomps++] = new Pot(c["pin"].as<int>(), c["steps"] | 32,
-                                parsePair(c["up"] | ""), parsePair(c["down"] | ""));
+                                parsePair(c["up"] | ""), parsePair(c["down"] | ""), btn, (int)(c["inv"] | 0) != 0);
     } else if (t == "joystick" || t == "remotejoy") {
       bool rem = (t == "remotejoy");
       if (rem) needRemote = true;
@@ -4933,12 +4005,12 @@ function render(){
   ${sel('LED chain runs','matrix.vert',M.vert,[[0,'Along rows'],[1,'Along columns']],1)}
   ${sel('Mirror horizontally','matrix.flipX',M.flipX,yn,1)}${sel('Mirror vertically','matrix.flipY',M.flipY,yn,1)}
   ${fld('Scrolling text (effect "text"). {time} = the clock, {song} = the song playing','matrix.text',M.text,0,'maxlength=60')}
-  ${sel('Text speed','matrix.tspeed',M.tspeed,SPD,1)}${sel('Game speed','matrix.gspeed',M.gspeed,SPD,1)}
-  <small>Games (snake, pong, breakout, dodge, tetris, flappy, invaders) are played with the joystick while they are on the matrix; the mouse works again when you pick another effect. Effect "timer" shows the timer button's countdown.</small>
+  ${sel('Text speed','matrix.tspeed',M.tspeed,SPD,1)}
+  <small>Effect "timer" shows the timer button's countdown.</small>
   <small>Button on GPIO 40: press = next effect, hold 0.7-3 s then release = previous, hold 3 s = off / on.</small></div>
   <div class=card><h3>OLED</h3>${sel('Display','oled.on',O.on,[[1,'On'],[0,'Off']],1)}${fld('Brightness (0-255)','oled.bright',O.bright,1)}
   ${sel('Rotation','oled.rot',O.rot,[[0,'Normal'],[1,'180 degrees']],1)}${fld('Sleep after N seconds idle (0 = never)','oled.sleep',O.sleep,1)}
-  ${sel('Main screen','oled.home',O.home,[['clock','Clock'],['movies','Movies (4 short movies, one after another)'],['cycle','All animations (8 s each)'],['page','The page below']].concat((FX.oled||[]).map(n=>[n,'Animation: '+n])))}${sel('Page shown for 5 s after a press','oled.page',O.page,[[0,'Status'],[1,'Effects'],[2,'Last action'],[3,'Custom text'],[4,'Media (song + volume)']],1)}<small>Media keys (volume, play, next...) always show the Media page. Song and volume come from an iPad / iPhone; other devices only show the key.</small>${fld('Custom text (page 4)','oled.text',O.text,0,'maxlength=36')}
+  ${sel('Main screen','oled.home',O.home,[['clock','Clock'],['page','The page below']])}${sel('Page shown for 5 s after a press','oled.page',O.page,[[0,'Status'],[1,'Effects'],[2,'Last action'],[3,'Custom text'],[4,'Media (song + volume)']],1)}<small>Media keys (volume, play, next...) always show the Media page. Song and volume come from an iPad / iPhone; other devices only show the key.</small>${fld('Custom text (page 4)','oled.text',O.text,0,'maxlength=36')}
   <small>Buttons can use oled:main (next main screen), oled:next (next page) and oled:toggle (OLED on / off).</small></div>
   <div class=card><h3>Clock</h3>${sel('Show the time on the OLED','clock.on',K.on,[[1,'Yes'],[0,'No']],1)}${sel('Format','clock.h24',K.h24,[[1,'24 hour'],[0,'12 hour (AM / PM)']],1)}
   ${fld('Home Wi-Fi name','clock.ssid',K.ssid,0,'maxlength=32 autocapitalize=off autocorrect=off')}${fld('Home Wi-Fi password','clock.pass',K.pass,0,'type=password maxlength=64 placeholder="'+(K.passSet?'saved - leave empty to keep it':'')+'"')}
@@ -4959,8 +4031,11 @@ function render(){
       +fld('Push-switch pin (-1 = none)',P+'sw',c.sw,1)+act('Push action',P+'swAction',c.swAction)+act('Push: long press (optional)',P+'swLong',c.swLong)+act('Push: double tap (optional)',P+'swDbl',c.swDbl)+act('Push with Fn held',P+'swFnAction',c.swFnAction)+act('Push: long press with Fn held (optional)',P+'swFnLong',c.swFnLong)+act('Push: double tap with Fn held (optional)',P+'swFnDbl',c.swFnDbl);
     if(c.type=='timer') h+=fld('GPIO pin',P+'pin',c.pin,1)+'<small>Timer button: tap = +1 min, hold = +5 s every 50 ms, double tap = -1 min. It starts 3 s after the last press. Press while it runs = back to setting, press when it rings = stop. The matrix shows the timer by itself.<br>Triple click = stopwatch (triple click again = timer). Stopwatch: tap = start / pause / go on, double tap = back to 0:00.</small>';
     if(c.type=='fn') h+=fld('GPIO pin',P+'pin',c.pin,1)+'<small>Fn (control) button: hold it and press a button or turn an encoder to run its "with Fn held" action. If that action is empty, the normal action runs.</small>';
-    if(c.type=='pot') h+=fld('ADC1 pin (GPIO 1-10)',P+'pin',c.pin,1)+fld('Steps over full travel',P+'steps',c.steps,1)
-      +act('Moving up',P+'up',c.up)+act('Moving down',P+'down',c.down);
+    if(c.type=='pot') h+=fld('ADC1 pin (GPIO 1-10)',P+'pin',c.pin,1)
+      +sel('This pot controls',P+'bt',c.bt||'actions',[['actions','Actions (steps, e.g. volume)'],['all','Brightness: whole device (strip + matrix + OLED + stick)'],['strip','Brightness: LED strip'],['matrix','Brightness: LED matrix'],['oled','Brightness: OLED']])
+      +sel('Reverse direction',P+'inv',c.inv||0,yn,1)
+      +'<small>Brightness: the knob scales the brightness saved in the setup page (full turn = the saved value, down = dark). Wire the pot: one outer pin to GND, the other to 3.3 V, the middle pin to the GPIO.</small>'
+      +((c.bt||'actions')=='actions'?fld('Steps over full travel',P+'steps',c.steps,1)+act('Moving up',P+'up',c.up)+act('Moving down',P+'down',c.down):'');
     if(c.type=='joystick') h+=fld('X axis pin (ADC1: GPIO 1-10)',P+'x',c.x,1)+fld('Y axis pin (ADC1: GPIO 1-10)',P+'y',c.y,1)
       +fld('Stick button pin (-1 = none)',P+'sw',c.sw,1)+sel('Stick button clicks',P+'btn',c.btn,['left','right','middle'])
       +sel('Mode',P+'mode',c.mode,[['mouse','Move mouse'],['scroll','Scroll (up/down/left/right)']])
@@ -5006,7 +4081,7 @@ const D={button:{type:'button',pin:4,action:'copy',rep:0,long:'',dbl:'',fnAction
  fn:{type:'fn',pin:11},
  timer:{type:'timer',pin:14},
  encoder:{type:'encoder',a:8,b:9,div:4,cw:'volup',ccw:'voldown',cwFn:'',ccwFn:'',sw:-1,swAction:'',swLong:'',swDbl:'',swFnAction:'',swFnLong:'',swFnDbl:''},
- pot:{type:'pot',pin:1,steps:32,up:'media:volup',down:'media:voldown'},
+ pot:{type:'pot',pin:10,bt:'all',inv:0,steps:32,up:'media:volup',down:'media:voldown'},
  joystick:{type:'joystick',x:1,y:2,sw:-1,btn:'left',mode:'mouse',sens:12,dead:12,invX:0,invY:0},
  remotejoy:{type:'remotejoy',btn:'left',mode:'mouse',sens:12,dead:12,invX:0,invY:0,dbl:'',long:'rightclick',sdbl:'',
   lfx:255,lbright:60,lcount:12,lma:250,lhue:160,lspeed:128,lsleep:5,boost:3}};
@@ -5015,7 +4090,7 @@ function del(i){cfg.components.splice(i,1);render()}
 function norm(c){
   c.name=c.name||'MacroPad';c.power=c.power||500;c.pmode=c.pmode??0;c.pswap=c.pswap??1;c.batPin=c.batPin??-1;c.batSave=c.batSave??1;c.ctlon=c.ctlon??1;
   c.led=Object.assign({count:8,bright:60,hue:160,fx:'breathe',speed:128},c.led);
-  c.matrix=Object.assign({w:0,h:0,bright:40,hue:96,fx:'plasma',speed:128,serp:1,vert:0,flipX:0,flipY:0,text:'MacroPad',gspeed:3,tspeed:3},c.matrix);
+  c.matrix=Object.assign({w:0,h:0,bright:40,hue:96,fx:'plasma',speed:128,serp:1,vert:0,flipX:0,flipY:0,text:'MacroPad',tspeed:3},c.matrix);
   c.oled=Object.assign({on:1,bright:128,rot:0,sleep:0,page:0,home:'clock',text:'MacroPad'},c.oled);
   c.clock=Object.assign({on:1,h24:1,ssid:'',pass:'',passSet:0,tz:'EET-2EEST,M3.5.0/0,M10.5.0/0',night:0,nfrom:22,nto:7,nlvl:25},c.clock);
   c.components=c.components||[];
@@ -5277,7 +4352,6 @@ static void startConfigPortal() {
     s += "],\"matrix\":[";
     for (uint8_t i = 0; i < N_MAT_FX; i++)   { if (i) s += ','; s += '"'; s += matFxName(i);   s += '"'; }
     s += "],\"oled\":[";
-    for (uint8_t i = 0; i < N_OANIM; i++)    { if (i) s += ','; s += '"'; s += OANIM_NAMES[i]; s += '"'; }
     s += "],\"alias\":[";
     for (size_t i = 0; i < sizeof(ALIASES) / sizeof(ALIASES[0]); i++) { if (i) s += ','; s += '"'; s += ALIASES[i].name; s += '"'; }
     s += "]}";
@@ -5658,12 +4732,25 @@ void setup() {
 
   // effect last chosen with the buttons (cleared whenever the config is saved in the web UI)
   if (profileMode == 0) profile = prefs.getUChar("prof", 0) ? 1 : 0;   // last mode until the device is recognised
+  if (prefs.getUChar("mfxv", 1) < 2) {                      // v7.1: the 7 matrix games were removed -> later matrix effect numbers moved down by 7
+    constexpr uint8_t G0 = MF_JOY + 1, NG = 7;
+    auto mv = [](int i) -> int { return i < G0 ? i : (i < G0 + NG ? -1 : i - NG); };
+    uint8_t om = prefs.getUChar("mfx", 255);
+    if (om != 255) prefs.putUChar("mfx", (uint8_t)max(0, mv(om)));
+    const int oldN = N_MAT_FX + NG, oldB = (oldN + 7) / 8;
+    uint8_t oldF[40] = {0}, newF[FAV_M_B] = {0};
+    if (oldB <= (int)sizeof oldF && (int)prefs.getBytesLength("favM") == oldB && prefs.getBytes("favM", oldF, oldB) == (size_t)oldB) {
+      for (int i = 0; i < oldN; i++) if (oldF[i >> 3] & (1 << (i & 7))) { int n = mv(i); if (n >= 0) newF[n >> 3] |= (uint8_t)(1 << (n & 7)); }
+      prefs.putBytes("favM", newF, sizeof newF);
+    }
+    prefs.putUChar("mfxv", 2);
+  }
   uint8_t s = prefs.getUChar("sfx", 255), m = prefs.getUChar("mfx", 255);
   if (s < N_STRIP_FX) curSFx = s;
   if (m < N_MAT_FX)   curMFx = m;
   prefs.getBytes("favS", favS, sizeof favS); prefs.getBytes("favM", favM, sizeof favM); prefs.getBytes("favK", favK, sizeof favK);
   int8_t oh = prefs.getChar("ohome", -100);                // main screen last chosen with oled:main
-  if (oh == HOME_CLOCK || oh == HOME_PAGE || oh == HOME_CYCLE || oh == HOME_MOVIES || (oh >= 0 && oh < (int8_t)N_OANIM)) oHome = oh;
+  if (oh == HOME_CLOCK || oh == HOME_PAGE) oHome = oh;
   if (rtcValid) { stripOff = rtcStripOff; matOff = rtcMatOff; }   // strip/matrix on/off kept across sleep
 
   ADD_STRIP();
