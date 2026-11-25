@@ -7,7 +7,11 @@ struct ArForm;
 struct TextLine;
 
 /*
- * ESP32-S3 Wireless Macro Pad v7.1  (Arduino IDE / arduino-esp32 core 3.x)
+ * ESP32-S3 Wireless Macro Pad v7.2  (Arduino IDE / arduino-esp32 core 3.x)
+ *
+ * NEW in v7.2: a second LED strip on its own data pin (GPIO 16, "strip 2": surface light / backlight, own LED count and brightness, same effect as
+ *   strip 1, never shows the timer). Strip 1 (the one facing up) can show a status: a timer in its last 10 s flashes 3 times, then a song's progress
+ *   (playing, and 3 s after pausing), then a stopwatch (one lap per minute), then the time left on a timer; otherwise the effect.
  *
  * NEW in v7.1: a pot can be a BRIGHTNESS KNOB: in the setup page pick what it controls (whole device incl. stick, strip, matrix or OLED;
  *   it scales the brightness saved in the setup page; "Reverse direction" if it turns the wrong way). Removed: the 7 matrix games and all OLED
@@ -333,6 +337,7 @@ struct TextLine;
 constexpr uint8_t  PIN_MODE_BTN  = 21;   // to GND, internal pull-up
 constexpr uint8_t  PIN_STRIP     = 38;   // WS2812B strip data
 constexpr uint8_t  PIN_MATRIX    = 47;   // WS2812B matrix data
+constexpr uint8_t  PIN_STRIP2    = 16;   // WS2812B second strip data (surface light / backlight); off when its LED count is 0
 constexpr int8_t   PIN_STRIP_PWR = 12;   // strip power switch (2N2222A base), HIGH = strip on. -1 = none
 constexpr int8_t   PIN_MAT_PWR   = 13;   // matrix power switch (MOSFET gate), HIGH = matrix on. -1 = none
                                          // these pins are blocked in the web UI
@@ -358,6 +363,7 @@ constexpr uint32_t WARN_MS        = 10000;                // OLED countdown befo
 // If FastLED gives a "pin invalid" / PARLIO error, change only these two lines (see notes in chat).
 #define ADD_STRIP()   FastLED.addLeds<WS2812B, PIN_STRIP, GRB>(sOut, sCfg.count)
 #define ADD_MATRIX()  FastLED.addLeds<WS2812B, PIN_MATRIX, GRB>(mOut, mCfg.w * mCfg.h)
+#define ADD_STRIP2()  FastLED.addLeds<WS2812B, PIN_STRIP2, GRB>(s2Out, sCfg.count2)
 
 // Pins the web UI may assign. Excluded: 0,3,45,46 (strapping), 19,20 (USB), 26-32 (flash/PSRAM),
 // 33-37 (octal PSRAM), 41,42 (OLED), 21 (mode btn), 38 (strip), 47 (matrix),
@@ -366,7 +372,7 @@ static const uint8_t ALLOWED_PINS[] = {1,2,4,5,6,7,8,9,10,11,12,13,14,15,16,17,1
 
 static const char DEFAULT_JSON[] =
   "{\"name\":\"MacroPad\",\"power\":500,\"pmode\":0,\"pswap\":1,"
-  "\"led\":{\"count\":8,\"bright\":60,\"hue\":160,\"fx\":\"breathe\",\"speed\":128},"
+  "\"led\":{\"count\":8,\"bright\":60,\"count2\":0,\"bright2\":60,\"status\":1,\"hue\":160,\"fx\":\"breathe\",\"speed\":128},"
   "\"matrix\":{\"w\":0,\"h\":0,\"bright\":40,\"hue\":96,\"fx\":\"plasma\",\"speed\":128,\"serp\":1,\"vert\":0,\"flipX\":0,\"flipY\":0},"
   "\"oled\":{\"on\":1,\"bright\":128,\"rot\":0,\"sleep\":0,\"page\":0,\"home\":\"clock\",\"text\":\"MacroPad\"},"
   "\"clock\":{\"on\":1,\"h24\":1,\"ssid\":\"\",\"pass\":\"\",\"tz\":\"EET-2EEST,M3.5.0/0,M10.5.0/0\"},"
@@ -465,7 +471,7 @@ static bool        cfgMode = false;
 static String      deviceName = "MacroPad";
 static uint16_t    powerMA = 500;
 
-struct StripCfg { uint16_t count = 8; uint8_t bright = 60, hue = 160, speed = 128; } sCfg;
+struct StripCfg { uint16_t count = 8, count2 = 0; uint8_t bright = 60, bright2 = 60, hue = 160, speed = 128; bool status = true; } sCfg;   // count2 = second strip (0 = none); status = strip 1 shows song / timer / stopwatch
 static char matText[65] = "MacroPad";                   // matrix "text" effect ({time} and {song} are filled in)
 static uint8_t matTextSpeed = 3;        // setup page, 1 (slowest) .. 10 (fastest)
 static int textScroll(uint32_t now, int w, int W) {        // x position of scrolling text (2.5 pixels / s per speed step)
@@ -494,7 +500,7 @@ static volatile bool     swMode = false;                  // the timer button wo
 static volatile uint8_t  swState = SW_IDLE;
 static volatile uint32_t swStartAt = 0, swAccum = 0;      // elapsed = swAccum (+ time since swStartAt while running)
 static uint32_t swElapsed() { return swState == SW_RUN ? swAccum + (millis() - swStartAt) : swAccum; }
-constexpr const char* FW_VERSION = "7.1";
+constexpr const char* FW_VERSION = "7.2";
 static volatile bool sotaBusy = false;                    // sending a firmware file to the stick right now
 static bool sleepAllowed() { return timerState == T_IDLE && swState == SW_IDLE && !sotaBusy; }   // never sleep with a timer / stopwatch / stick update going
 
@@ -1950,7 +1956,7 @@ static Component* comps[MAX_COMPONENTS];
 static uint8_t    ncomps = 0;
 
 // ============================ LEDs ============================
-static CRGB sBuf[MAX_STRIP], sOut[MAX_STRIP];            // sBuf = effect canvas, sOut = scaled output
+static CRGB sBuf[MAX_STRIP], sOut[MAX_STRIP], s2Out[MAX_STRIP];   // sBuf = effect canvas, sOut = strip 1 output, s2Out = strip 2 output
 static CRGB mBuf[MAX_MAT + 1], mOut[MAX_MAT];            // mBuf has 1 spare slot for out-of-range pixels
 static uint32_t sT = 0, mT = 0;                          // effect clocks (scaled by speed)
 
@@ -2032,6 +2038,26 @@ static CRGB dayColor(int* minuteOut = nullptr) {
 }
 
 // ---- strip effects
+// the song progress bar: fills up as the song plays (colour per song), dims when paused
+static void drawSongBar(CRGB* b, uint16_t n, uint32_t t, float fr, bool pl, uint8_t sh) {
+  const uint8_t v = pl ? 255 : tbeat(t, 15, 50, 110);
+  const float f = fr * n;
+  for (uint16_t i = 0; i < n; i++) {
+    if (i + 1 <= f)  b[i] = CHSV(sh + i * 3, 230, v);
+    else if (i < f)  b[i] = CHSV(sh, 150, scale8(v, (uint8_t)((f - i) * 255)));
+    else             b[i] = CHSV(sh, 230, 6);
+  }
+  if (pl) { uint16_t hd = (uint16_t)f; if (hd > n - 1) hd = n - 1; b[hd] += CHSV(sh, 60, tbeat(t, 40, 40, 160)); }   // the head glows
+}
+// a bar of f (0..1) of the strip, with a soft edge
+static void drawBar(CRGB* b, uint16_t n, float f, CRGB on, CRGB off) {
+  const float x = f * n;
+  for (uint16_t i = 0; i < n; i++) {
+    if (i + 1 <= x) b[i] = on;
+    else if (i < x) { CRGB c = on; c.nscale8((uint8_t)((x - i) * 255)); b[i] = c + off; }
+    else b[i] = off;
+  }
+}
 static uint8_t heat1[MAX_STRIP];
 static void stripFx(uint8_t fx, uint16_t n) {
   const uint32_t t = sT; const uint8_t hue = sCfg.hue;
@@ -2216,14 +2242,7 @@ static void stripFx(uint8_t fx, uint16_t n) {
     case SF_SONG: {                                     // fills up as the song plays (colour per song), dims when paused
       float fr; bool pl; uint8_t sh;
       if (!songProgress(fr, pl, sh)) { fill_solid(sBuf, n, CHSV(hue, 200, tbeat(t, 8, 15, 60))); break; }   // nothing playing: soft glow
-      const uint8_t v = pl ? 255 : tbeat(t, 15, 50, 110);
-      const float f = fr * n;
-      for (uint16_t i = 0; i < n; i++) {
-        if (i + 1 <= f)  sBuf[i] = CHSV(sh + i * 3, 230, v);
-        else if (i < f)  sBuf[i] = CHSV(sh, 150, scale8(v, (uint8_t)((f - i) * 255)));
-        else             sBuf[i] = CHSV(sh, 230, 6);
-      }
-      if (pl) { uint16_t hd = (uint16_t)f; if (hd > n - 1) hd = n - 1; sBuf[hd] += CHSV(sh, 60, tbeat(t, 40, 40, 160)); }   // the head glows
+      drawSongBar(sBuf, n, t, fr, pl, sh);
     } break;
     default:
       if (isWledStrip(fx)) wfx::wfxFrame(0, wfx::WFX1D[fx - SF_WLED], sBuf, n, 0, 0, nullptr, sCfg.speed, sCfg.hue, millis());
@@ -2890,6 +2909,43 @@ static uint8_t nightScale() {
   return v = max<uint8_t>(1, scale8(l, l));                            // so the % is applied squared (50 % = a quarter of the power)
 }
 
+// What strip 1 (the one that faces up) shows instead of the effect. false = show the normal effect.
+//  1. a timer in its last 10 s: 3 flashes, then back     2. a song: progress bar (while playing, and for 3 s after it is paused)
+//  3. a stopwatch: one lap of the strip per minute        4. a timer: the time left as a bar
+static bool stripStatus(CRGB* b, uint16_t n) {
+  static uint32_t pausedAt = 0; static bool wasPlaying = false;
+  const uint32_t now = millis();
+  float fr = 0; bool pl = false; uint8_t sh = 0;
+  const bool song = songProgress(fr, pl, sh);
+  if (song && pl) wasPlaying = true;
+  else if (wasPlaying) { wasPlaying = false; pausedAt = now; }
+  const bool songShow = song && (pl || (pausedAt && now - pausedAt < 3000));
+  const bool tRun = timerState == T_RUN;
+  const int32_t rem = tRun ? timerRemaining() : 0;
+  if (tRun && rem > 8500 && rem <= 10000) {                     // near the end: 3 flashes (the first 1.5 s of the last 10 s)
+    const bool on = ((10000 - rem) / 250) % 2 == 0;
+    fill_solid(b, n, on ? CRGB(CHSV(10, 255, 255)) : CRGB(0, 0, 0));
+    return true;
+  }
+  if (songShow) { drawSongBar(b, n, now, fr, pl, sh); return true; }
+  if (swMode && swState != SW_IDLE) {                            // stopwatch: one lap per minute, a new colour each minute
+    const uint32_t el = swElapsed();
+    const uint8_t hue = (uint8_t)(130 + (el / 60000) * 35);
+    CRGB on = CHSV(hue, 255, 255), off = CHSV(hue, 255, 6);
+    if (swState == SW_PAUSE && !((now / 400) & 1)) on.nscale8(70);
+    drawBar(b, n, (el % 60000) / 60000.0f, on, off);
+    return true;
+  }
+  if (tRun) {                                                    // timer: what is left, green -> red
+    const uint32_t tot = timerTotalMs > 0 ? timerTotalMs : 1;
+    float f = (float)rem / (float)tot; f = f < 0 ? 0 : f > 1 ? 1 : f;
+    const uint8_t hue = (uint8_t)(96.0f * f);
+    drawBar(b, n, f, CRGB(CHSV(hue, 255, 255)), CRGB(CHSV(hue, 255, 6)));
+    return true;
+  }
+  return false;
+}
+
 static void renderFrame(uint32_t dt) {
   static uint8_t lastSFx = 255, lastMFx = 255;
   static bool sWasOff = false, mWasOff = false;
@@ -2909,10 +2965,11 @@ static void renderFrame(uint32_t dt) {
   const uint8_t bs = batBrightScale();                  // battery saver: dimmer as the battery gets low
   const uint8_t ns = nightScale(); nightNow = ns;      // night mode
   uint8_t sB = scale8(scale8(scale8(scale8(sCfg.bright, dimLvl), bs), ns), scale8(potAll, potStrip)); if (!sB) sB = 1;
+  uint8_t sB2 = scale8(scale8(scale8(scale8(sCfg.bright2, dimLvl), bs), ns), scale8(potAll, potStrip)); if (!sB2) sB2 = 1;
   uint8_t mB = scale8(scale8(scale8(scale8(mCfg.bright, dimLvl), bs), ns), scale8(potAll, potMat));   if (!mB) mB = 1;
 
-  // ---- strip
-  uint16_t n = sCfg.count;
+  // ---- strips: one effect canvas as long as the longer strip; strip 1 (up) may show a status instead (song / timer / stopwatch)
+  const uint16_t nA = sCfg.count, nB = sCfg.count2, n = max(nA, nB);
   if (forceWhite)    fill_solid(sBuf, n, CRGB::White);
   else if (cfgMode && !pvs) fill_solid(sBuf, n, CHSV(25, 255, tbeat(millis(), 45, 30, 255)));   // amber = config mode
   else if (sOff)     { fill_solid(sBuf, n, CRGB(0, 0, 0)); sWasOff = true; }                 // switched off by 3 s hold
@@ -2923,10 +2980,17 @@ static void renderFrame(uint32_t dt) {
       if (isWledStrip(fx)) wfx::wfxSelect(0, wfx::WFX1D[fx - SF_WLED]); else wfx::gSegs[0].resetRuntime(); }
     stripFx(fx, n);
   }
+  static CRGB aBuf[MAX_STRIP];
+  const bool status = sCfg.status && !cfgMode && !forceWhite && !sOff && conn && stripStatus(aBuf, nA);
   CRGB sw = CRGB::White; sw.nscale8_video(sB);
-  for (uint16_t i = 0; i < n; i++) {
-    sOut[i] = sBuf[i]; sOut[i].nscale8_video(sB);
+  for (uint16_t i = 0; i < nA; i++) {
+    sOut[i] = status ? aBuf[i] : sBuf[(uint32_t)i * n / nA]; sOut[i].nscale8_video(sB);
     if (fl && !sOff) nblend(sOut[i], sw, fl);
+  }
+  CRGB sw2 = CRGB::White; sw2.nscale8_video(sB2);
+  for (uint16_t i = 0; i < nB; i++) {
+    s2Out[i] = sBuf[(uint32_t)i * n / nB]; s2Out[i].nscale8_video(sB2);
+    if (fl && !sOff) nblend(s2Out[i], sw2, fl);
   }
 
   // ---- matrix
@@ -2950,7 +3014,7 @@ static void renderFrame(uint32_t dt) {
   // ---- about to sleep: strip and matrix flash amber twice a second (at full brightness, not dimmed)
   if (!cfgMode && !forceWhite && sleepAllowed() && idleMs() > (int32_t)(sleepAfterMs() - WARN_MS)) {
     const bool on = (millis() / 250) & 1;
-    if (!sOff) { CRGB c = on ? CRGB(CHSV(25, 255, 255)) : CRGB(0, 0, 0); c.nscale8_video(sCfg.bright); fill_solid(sOut, n, c); }
+    if (!sOff) { CRGB c = on ? CRGB(CHSV(25, 255, 255)) : CRGB(0, 0, 0); CRGB c2 = c; c.nscale8_video(sCfg.bright); c2.nscale8_video(sCfg.bright2); fill_solid(sOut, nA, c); fill_solid(s2Out, nB, c2); }
     if (matOn && !mOff) { CRGB c = on ? CRGB(CHSV(25, 255, 255)) : CRGB(0, 0, 0); c.nscale8_video(mCfg.bright); fill_solid(mOut, mCfg.w * mCfg.h, c); }
   }
   const int8_t bp = batPct;
@@ -2959,14 +3023,15 @@ static void renderFrame(uint32_t dt) {
     if ((lowAt && now - lowAt < 3000) || (now % 30000) < 900) {
       const bool on = (now / 150) & 1;
       CRGB c = on ? CRGB(255, 0, 0) : CRGB(0, 0, 0);
-      CRGB cs = c; cs.nscale8_video(max<uint8_t>(sCfg.bright, 80)); fill_solid(sOut, n, cs);
+      CRGB cs = c; cs.nscale8_video(max<uint8_t>(sCfg.bright, 80)); fill_solid(sOut, nA, cs);
+      CRGB cs2 = c; cs2.nscale8_video(max<uint8_t>(sCfg.bright2, 80)); fill_solid(s2Out, nB, cs2);
       if (matOn && !mOff) { CRGB cm = c; cm.nscale8_video(mCfg.bright); fill_solid(mOut, mCfg.w * mCfg.h, cm); }
     }
   }
   if (timerState == T_ALARM && !cfgMode) {              // time is up: strip (and matrix) flash red
     const bool on = (millis() / 250) & 1;
     CRGB c = on ? CRGB(255, 0, 0) : CRGB(0, 0, 0);
-    CRGB cs = c; cs.nscale8_video(max<uint8_t>(sCfg.bright, 80)); fill_solid(sOut, n, cs);
+    CRGB cs = c; cs.nscale8_video(max<uint8_t>(sCfg.bright, 80)); fill_solid(sOut, nA, cs);     // strip 1 only: strip 2 never shows the timer
     if (matOn && curMFx != MF_TIMER) { CRGB cm = c; cm.nscale8_video(mCfg.bright); fill_solid(mOut, mCfg.w * mCfg.h, cm); }
   }
   if (fl) flashLevel = scale8(fl, 180);                 // key flash fade: lower = faster (was 225)
@@ -3553,6 +3618,7 @@ static void fxTask(void*) {
   for (;;) {
     if (goSleep) {
       fill_solid(sOut, MAX_STRIP, CRGB::Black);
+      fill_solid(s2Out, MAX_STRIP, CRGB::Black);
       fill_solid(mOut, MAX_MAT, CRGB::Black);
       FastLED.show();
 #if USE_OLED
@@ -3589,12 +3655,15 @@ static bool validateConfig(JsonDocument& d, String& err) {
   if (arr.size() > MAX_COMPONENTS){ err = "Too many components"; return false; }
   int lc = d["led"]["count"] | 8;
   if (lc < 1 || lc > MAX_STRIP)   { err = "LED strip: 1-256 LEDs"; return false; }
+  int lc2 = d["led"]["count2"] | 0;
+  if (lc2 < 0 || lc2 > MAX_STRIP) { err = "LED strip 2: 0-256 LEDs"; return false; }
   int mw = d["matrix"]["w"] | 0, mh = d["matrix"]["h"] | 0;
   if (mw < 0 || mh < 0 || mw > MAX_W || mh > MAX_H) { err = "Matrix: max 16x16"; return false; }
   if (strlen(d["clock"]["ssid"] | "") > 32) { err = "Wi-Fi name: max 32 characters"; return false; }
   if (strlen(d["clock"]["pass"] | "") > 64) { err = "Wi-Fi password: max 64 characters"; return false; }
   if (strlen(d["clock"]["tz"] | "") > 47)   { err = "Timezone: max 47 characters"; return false; }
   uint64_t used = 0;
+  if (lc2 > 0) used |= (1ULL << PIN_STRIP2);                    // strip 2 data pin is taken (GPIO 16)
   int bp = d["batPin"] | -1;
   if (bp >= 0 && !claimPin(used, bp, err, true)) return false;
   for (JsonObject c : arr) {
@@ -3645,6 +3714,9 @@ static void applyConfig(JsonDocument& d) {
   JsonObject l = d["led"];
   sCfg.count = constrain((int)(l["count"] | 8), 1, (int)MAX_STRIP);
   sCfg.bright = constrain((int)(l["bright"] | 60), 5, 255);
+  sCfg.count2 = constrain((int)(l["count2"] | 0), 0, (int)MAX_STRIP);
+  sCfg.bright2 = constrain((int)(l["bright2"] | 60), 5, 255);
+  sCfg.status = (int)(l["status"] | 1) != 0;
   sCfg.hue = (uint8_t)(int)(l["hue"] | 160);
   sCfg.speed = constrain((int)(l["speed"] | 128), 0, 255);
   curSFx = findFx(stripFxName, N_STRIP_FX, String(l["fx"] | "breathe"));
@@ -3995,9 +4067,12 @@ function render(){
   For a different action on the PC write both, separated by | , for example <b>key:gui+h | key:gui+d</b> (iPad | PC). Long press = hold 0.5 s, double tap = two presses within 0.3 s; leave them empty if not needed. A Mac counts as PC: choose Always iPad if you use a Mac.</small></div>
   ${favCard()}
   ${gifCard()}
-  <div class=card><h3>LED strip (max 256)</h3>${fld('LED count (1-256). Long strips: set the LED power limit above to what your power can give','led.count',L.count,1)}${fld('Brightness (5-255)','led.bright',L.bright,1)}
+  <div class=card><h3>LED strip 1 - the one facing up (data GPIO 38, max 256)</h3>${fld('LED count (1-256). Long strips: set the LED power limit above to what your power can give','led.count',L.count,1)}${fld('Brightness (5-255)','led.bright',L.bright,1)}
+  ${sel('Show song / stopwatch / timer on this strip','led.status',L.status,[[1,'Yes'],[0,'No (just the effect)']],1)}<small>Order: a timer in its last 10 s flashes 3 times, then a song shows its progress (while it plays and 3 s after it is paused), then a stopwatch (one lap per minute), then the time left on a timer. With none of these it shows the effect. Song progress needs an iPad / iPhone.</small>
   ${fld('Colour / hue (0-255)','led.hue',L.hue,1)}${fld('Speed (0-255)','led.speed',L.speed,1)}${sel('Effect (start-up)','led.fx',L.fx,FX.strip)}
   <small>Button on GPIO 39: press = next effect, hold 0.7-3 s then release = previous, hold 3 s = off / on.</small></div>
+  <div class=card><h3>LED strip 2 - surface light / backlight (data GPIO 16)</h3>${fld('LED count (0 = no second strip, max 256)','led.count2',L.count2,1)}${fld('Brightness (5-255)','led.bright2',L.bright2,1)}
+  <small>Always shows the same effect as strip 1 (colour, speed and effect are shared), never the timer, stopwatch or song. Power it from the same 5 V as strip 1 and share the GND. The strips are set up when the pad starts: save and restart after changing the counts.</small></div>
   <div class=card><h3>LED matrix (max 16x16)</h3>${fld('Width (0 = no matrix)','matrix.w',M.w,1)}${fld('Height','matrix.h',M.h,1)}
   ${fld('Brightness (5-255)','matrix.bright',M.bright,1)}${fld('Colour / hue (0-255)','matrix.hue',M.hue,1)}${fld('Speed (0-255)','matrix.speed',M.speed,1)}
   ${sel('Effect (start-up)','matrix.fx',M.fx,FX.matrix)}
@@ -4089,7 +4164,7 @@ function add(t){cfg.components.push({...D[t]});render()}
 function del(i){cfg.components.splice(i,1);render()}
 function norm(c){
   c.name=c.name||'MacroPad';c.power=c.power||500;c.pmode=c.pmode??0;c.pswap=c.pswap??1;c.batPin=c.batPin??-1;c.batSave=c.batSave??1;c.ctlon=c.ctlon??1;
-  c.led=Object.assign({count:8,bright:60,hue:160,fx:'breathe',speed:128},c.led);
+  c.led=Object.assign({count:8,bright:60,count2:0,bright2:60,status:1,hue:160,fx:'breathe',speed:128},c.led);
   c.matrix=Object.assign({w:0,h:0,bright:40,hue:96,fx:'plasma',speed:128,serp:1,vert:0,flipX:0,flipY:0,text:'MacroPad',tspeed:3},c.matrix);
   c.oled=Object.assign({on:1,bright:128,rot:0,sleep:0,page:0,home:'clock',text:'MacroPad'},c.oled);
   c.clock=Object.assign({on:1,h24:1,ssid:'',pass:'',passSet:0,tz:'EET-2EEST,M3.5.0/0,M10.5.0/0',night:0,nfrom:22,nto:7,nlvl:25},c.clock);
@@ -4755,6 +4830,7 @@ void setup() {
 
   ADD_STRIP();
   if (matOn) ADD_MATRIX();
+  if (sCfg.count2) ADD_STRIP2();
   FastLED.setBrightness(255);                     // per-strip brightness is applied in renderFrame()
   FastLED.setMaxPowerInVoltsAndMilliamps(5, powerMA);
 
