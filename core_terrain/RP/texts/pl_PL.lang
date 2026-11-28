@@ -1,4 +1,4 @@
-pack.name=Core Terrain v1.3.0
+pack.name=Core Terrain v1.4.0
 pack.description=Terrain, biomes and trees extracted from Core Craft
 tile.ct:smooth_end_stone.name=Gładki kamień końcowy
 item.ct:smooth_end_stone=Gładki kamień końcowy
@@ -343,3 +343,6 @@ item.ct:taiga_orange_plant.desc=§7Pomarańczowa roślina rosnąca w tajdze. Naj
 tile.ct:suspicious_ice.name=Podejrzany lód
 item.ct:suspicious_ice.desc=§7Lód, który zdaje się coś w sobie ukrywać.
 item.ct:tall_pale_mushrooms.desc=§7Wysoki blady grzyb rosnący na pustyni.
+
+tile.ct:grass_layer.name=Grass Layer
+item.ct:grass_layer=Grass Layer

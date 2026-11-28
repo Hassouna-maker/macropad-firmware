@@ -381,5 +381,8 @@
   },
   "ct:thin_oak_log": {
     "sound": "wood"
+  },
+  "ct:grass_layer": {
+    "sound": "grass"
   }
 }

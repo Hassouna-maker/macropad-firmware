@@ -1,4 +1,4 @@
-pack.name=Core Terrain v1.3.0
+pack.name=Core Terrain v1.4.0
 pack.description=Terrain, biomes and trees extracted from Core Craft
 tile.ct:smooth_end_stone.name=Pedra de extremidade lisa
 item.ct:smooth_end_stone=Pedra de extremidade lisa
@@ -343,3 +343,6 @@ item.ct:taiga_orange_plant.desc=§7Uma planta laranja que cresce na taiga. Encon
 tile.ct:suspicious_ice.name=Gelo Suspeito
 item.ct:suspicious_ice.desc=§7Gelo que parece esconder algo dentro.
 item.ct:tall_pale_mushrooms.desc=§7Cogumelos altos com gorros claros.
+
+tile.ct:grass_layer.name=Grass Layer
+item.ct:grass_layer=Grass Layer

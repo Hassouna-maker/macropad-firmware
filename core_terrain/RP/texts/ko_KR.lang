@@ -1,4 +1,4 @@
-pack.name=Core Terrain v1.3.0
+pack.name=Core Terrain v1.4.0
 pack.description=Terrain, biomes and trees extracted from Core Craft
 tile.ct:smooth_end_stone.name=매끄러운 끝 돌
 item.ct:smooth_end_stone=매끄러운 끝 돌
@@ -343,3 +343,6 @@ item.ct:taiga_orange_plant.desc=§7타이가에서 자라는 주황색 식물입
 tile.ct:suspicious_ice.name=수상한 얼음
 item.ct:suspicious_ice.desc=§7무언가를 숨기고 있는 듯한 얼음입니다.
 item.ct:tall_pale_mushrooms.desc=§7옅은 갓을 가진 키 큰 버섯입니다.
+
+tile.ct:grass_layer.name=Grass Layer
+item.ct:grass_layer=Grass Layer

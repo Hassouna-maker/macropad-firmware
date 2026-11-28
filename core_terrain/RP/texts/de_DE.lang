@@ -1,4 +1,4 @@
-pack.name=Core Terrain v1.3.0
+pack.name=Core Terrain v1.4.0
 pack.description=Terrain, biomes and trees extracted from Core Craft
 tile.ct:smooth_end_stone.name=Glatter Endstein
 item.ct:smooth_end_stone=Glatter Endstein
@@ -343,3 +343,6 @@ item.ct:taiga_orange_plant.desc=§7Eine orangefarbene Pflanze, die in der Taiga 
 tile.ct:suspicious_ice.name=Verdächtiges Eis
 item.ct:suspicious_ice.desc=§7Eis, das im Inneren etwas zu verbergen scheint.
 item.ct:tall_pale_mushrooms.desc=§7Hohe Pilze mit blassen Kappen.
+
+tile.ct:grass_layer.name=Grass Layer
+item.ct:grass_layer=Grass Layer

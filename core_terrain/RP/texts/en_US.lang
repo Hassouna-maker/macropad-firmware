@@ -1,4 +1,4 @@
-pack.name=Core Terrain v1.3.0
+pack.name=Core Terrain v1.4.0
 pack.description=Terrain, biomes and trees extracted from Core Craft
 tile.ct:smooth_end_stone.name=Smooth End Stone
 item.ct:smooth_end_stone=Smooth End Stone
@@ -344,3 +344,6 @@ item.ct:taiga_orange_plant.desc=§7An orange plant that grows in the taiga. Most
 tile.ct:suspicious_ice.name=Suspicious Ice
 item.ct:suspicious_ice.desc=§7Ice that seems to hide something within.
 item.ct:tall_pale_mushrooms.desc=§7Tall mushrooms with pale caps.
+
+tile.ct:grass_layer.name=Grass Layer
+item.ct:grass_layer=Grass Layer

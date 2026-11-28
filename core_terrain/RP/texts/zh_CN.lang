@@ -1,4 +1,4 @@
-pack.name=Core Terrain v1.3.0
+pack.name=Core Terrain v1.4.0
 pack.description=Terrain, biomes and trees extracted from Core Craft
 tile.ct:smooth_end_stone.name=光滑端石
 item.ct:smooth_end_stone=光滑端石
@@ -343,3 +343,6 @@ item.ct:taiga_orange_plant.desc=§7生长在针叶林中的橙色植物.通常�
 tile.ct:suspicious_ice.name=可疑的冰
 item.ct:suspicious_ice.desc=§7似乎隐藏着什么东西的冰.
 item.ct:tall_pale_mushrooms.desc=§7带有苍白菌盖的高蘑菇.
+
+tile.ct:grass_layer.name=Grass Layer
+item.ct:grass_layer=Grass Layer

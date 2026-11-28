@@ -9,3 +9,8 @@ they use. No villages, ruins, temples or mineshafts.
 - No scripts. Script-driven block behaviours (coconut growth, leaf decay, etc.) are removed.
 - Only newly generated chunks are affected: use a new world.
 - Source: Core Craft by its original author (CurseForge). Check its license before redistributing.
+
+## v1.4.0 additions (original, not from Core Craft)
+- `ct:alpine_peaks` (very high snowy mountains) and `ct:foothills` (rolling forested hills) biomes that replace parts of forest/plains/taiga/mountain areas.
+- Natural snow cover: snow layers get thicker with altitude, with a ragged, noise-shifted snow line.
+- `ct:grass_layer`: an 8-height grass layer block placed in noise patches on grass for low natural mounds.

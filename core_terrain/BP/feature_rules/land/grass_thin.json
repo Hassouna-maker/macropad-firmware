@@ -1,0 +1,60 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:feature_rules": {
+    "description": {
+      "identifier": "ct:land_grass_thin",
+      "places_feature": "ct:land/grass_thin"
+    },
+    "conditions": {
+      "placement_pass": "final_pass",
+      "minecraft:biome_filter": {
+        "any_of": [
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "forest"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "plains"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "hills"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "taiga"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "extreme_hills"
+          }
+        ]
+      }
+    },
+    "distribution": {
+      "iterations": 256,
+      "scatter_chance": 80.0,
+      "x": {
+        "distribution": "fixed_grid",
+        "extent": [
+          0,
+          15
+        ]
+      },
+      "y": "(q.noise(v.worldx/9, v.worldz/9) > 0.15 && q.noise(v.worldx/9, v.worldz/9) <= 0.35) ? (q.heightmap(v.worldx, v.worldz)) : -100",
+      "z": {
+        "distribution": "fixed_grid",
+        "extent": [
+          0,
+          15
+        ]
+      }
+    }
+  }
+}
