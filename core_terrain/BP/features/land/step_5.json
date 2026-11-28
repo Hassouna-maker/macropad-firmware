@@ -1,0 +1,17 @@
+{
+  "format_version": "1.13.0",
+  "minecraft:aggregate_feature": {
+    "description": {
+      "identifier": "ct:land/step_5"
+    },
+    "features": [
+      "ct:land/grass_h5",
+      "ct:land/dirt_h5",
+      "ct:land/coarse_dirt_h5",
+      "ct:land/sand_h5",
+      "ct:land/red_sand_h5",
+      "ct:land/gravel_h5",
+      "ct:land/stone_h5"
+    ]
+  }
+}

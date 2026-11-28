@@ -3,10 +3,10 @@
   "minecraft:feature_rules": {
     "description": {
       "identifier": "ct:land_snow_band3",
-      "places_feature": "ct:land/snow_h3"
+      "places_feature": "ct:land/snow_h6"
     },
     "conditions": {
-      "placement_pass": "final_pass",
+      "placement_pass": "first_pass",
       "minecraft:biome_filter": {
         "any_of": [
           {
@@ -37,7 +37,7 @@
           15
         ]
       },
-      "y": "((q.heightmap(v.worldx, v.worldz) + ((math.sin(v.worldx*3.1) + math.sin(v.worldz*2.7) + math.sin((v.worldx - v.worldz)*1.9)) / 3)*10) > 119 && (q.heightmap(v.worldx, v.worldz) + ((math.sin(v.worldx*3.1) + math.sin(v.worldz*2.7) + math.sin((v.worldx - v.worldz)*1.9)) / 3)*10) <= 124) ? (q.heightmap(v.worldx, v.worldz)) : -100",
+      "y": "((q.heightmap(v.worldx, v.worldz) + ((math.sin(v.worldx*3.1) + math.sin(v.worldz*2.7 + 20) + math.sin((v.worldx - v.worldz)*1.9)) / 3)*10) > 131) ? (q.heightmap(v.worldx, v.worldz)) : -100",
       "z": {
         "distribution": "fixed_grid",
         "extent": [

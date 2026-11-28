@@ -134,13 +134,13 @@ function logNear(dim, p) {
 }
 function* decay(dim, c) {
   let n = 0;
-  for (let dx = -7; dx <= 7; dx++)
-    for (let dy = -7; dy <= 7; dy++)
-      for (let dz = -7; dz <= 7; dz++) {
+  for (let dx = -6; dx <= 6; dx++)
+    for (let dy = -6; dy <= 6; dy++)
+      for (let dz = -6; dz <= 6; dz++) {
         const p = { x: c.x + dx, y: c.y + dy, z: c.z + dz };
         const b = dim.getBlock(p);
         if (b && PALM_LEAVES.has(b.typeId) && !logNear(dim, p)) b.setType("minecraft:air");
-        if (++n % 40 === 0) yield;
+        if (++n % 12 === 0) yield;
       }
 }
 world.afterEvents.playerBreakBlock.subscribe((ev) => {
@@ -154,7 +154,7 @@ system.runInterval(() => {
   for (const player of world.getAllPlayers()) {
     const dim = player.dimension;
     const p = player.location;
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       const x = Math.floor(p.x + (Math.random() - 0.5) * 28);
       const z = Math.floor(p.z + (Math.random() - 0.5) * 28);
       let top;
@@ -171,4 +171,4 @@ system.runInterval(() => {
       }
     }
   }
-}, 15);
+}, 60);

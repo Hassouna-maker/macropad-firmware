@@ -3,7 +3,7 @@
   "minecraft:feature_rules": {
     "description": {
       "identifier": "ct:land_swampmud_band2",
-      "places_feature": "ct:land/mud_h2"
+      "places_feature": "ct:land/mud_h3"
     },
     "conditions": {
       "placement_pass": "first_pass",
@@ -27,7 +27,7 @@
           15
         ]
       },
-      "y": "(((math.sin(v.worldx*3.3 + 10) + math.sin(v.worldz*4.1) + math.sin((v.worldx - v.worldz)*2.2)) / 3) > 0.41 && ((math.sin(v.worldx*3.3 + 10) + math.sin(v.worldz*4.1) + math.sin((v.worldx - v.worldz)*2.2)) / 3) <= 0.54) ? (q.heightmap(v.worldx, v.worldz)) : -100",
+      "y": "(((math.sin(v.worldx*3.3 + 10) + math.sin(v.worldz*4.1) + math.sin((v.worldx - v.worldz)*2.2)) / 3) > 0.65) ? (q.heightmap(v.worldx, v.worldz)) : -100",
       "z": {
         "distribution": "fixed_grid",
         "extent": [

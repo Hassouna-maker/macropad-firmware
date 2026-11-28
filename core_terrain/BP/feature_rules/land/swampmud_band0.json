@@ -27,7 +27,7 @@
           15
         ]
       },
-      "y": "(((math.sin(v.worldx*3.3 + 10) + math.sin(v.worldz*4.1) + math.sin((v.worldx - v.worldz)*2.2)) / 3) > 0.15 && ((math.sin(v.worldx*3.3 + 10) + math.sin(v.worldz*4.1) + math.sin((v.worldx - v.worldz)*2.2)) / 3) <= 0.28) ? (q.heightmap(v.worldx, v.worldz)) : -100",
+      "y": "(((math.sin(v.worldx*3.3 + 10) + math.sin(v.worldz*4.1) + math.sin((v.worldx - v.worldz)*2.2)) / 3) > 0.15 && ((math.sin(v.worldx*3.3 + 10) + math.sin(v.worldz*4.1) + math.sin((v.worldx - v.worldz)*2.2)) / 3) <= 0.4) ? (q.heightmap(v.worldx, v.worldz)) : -100",
       "z": {
         "distribution": "fixed_grid",
         "extent": [

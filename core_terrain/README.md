@@ -23,3 +23,4 @@ they use. No villages, ruins, temples or mineshafts.
 - v1.9.0: layers in every overworld biome and generated before trees (so forests work), irregular steps, dirt/coarse dirt layers on dirt/coarse dirt ledges, leaf litter generation removed, foothills are now real rocky mountains.
 - v1.10.0: moss layers no longer generate (still craftable); added sand and red sand layers (generate on sand/red sand ledges, craftable, stackable).
 - v1.11.0: scree/stone/snow steps on mountain slopes; gravel, stone and mud layers; mountain springs and flat-ground ponds; ravines; rock spires (desert, mesa, mountains); desert/mesa dunes and swamp mud mounds; script: natural palm sapling growth, palm leaf decay, falling-leaf and pollen particles.
+- v1.12.0: performance pass: terrain layer rules cut from 66 to 24, particle script runs less often, palm leaf decay scans less.
