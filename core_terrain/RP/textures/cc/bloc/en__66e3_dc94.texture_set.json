@@ -1,0 +1,8 @@
+{
+  "format_version": "1.21.30",
+  "minecraft:texture_set": {
+    "color": "en__66e3_dc94",
+    "heightmap": "en__66e3_dc94_heightmap",
+    "metalness_emissive_roughness_subsurface": "en__66e3_dc94_mers"
+  }
+}

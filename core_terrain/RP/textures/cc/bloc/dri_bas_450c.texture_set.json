@@ -1,0 +1,7 @@
+{
+  "format_version": "1.21.30",
+  "minecraft:texture_set": {
+    "color": "dri_bas_450c",
+    "metalness_emissive_roughness_subsurface": "dri_bas_450c_mers"
+  }
+}

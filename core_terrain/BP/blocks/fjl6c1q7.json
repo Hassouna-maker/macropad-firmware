@@ -1,87 +1,86 @@
 {
-    "format_version": "1.26.0",
-    "minecraft:block": {
-        "description": {
-            "identifier": "ct:gilded_end_moss",
-            "menu_category": {
-                "category": "nature",
-                "group": "minecraft:itemGroup.name.leaves"
-            },
-            "states": {
-                "ct:player_placed": [
-                    false,
-                    true
-                ],
-                "ct:update_bit": [
-                    false,
-                    true
-                ]
-            }
-        },
-        "components": {
-            "tag:ulkd_ess:tree_leaves_end_spire": {},
-            "ct:decay_block": {},
-            "minecraft:collision_box": true,
-            "minecraft:selection_box": true,
-            "minecraft:map_color": "#e2bc55",
-            "minecraft:geometry": {
-                "identifier": "geometry.full_block",
-                "culling": "ct:culling.leaves",
-                "culling_layer": "minecraft:culling_layer.leaves"
-            },
-            "minecraft:material_instances": {
-                "*": {
-                    "texture": "ct:gilded_end_moss",
-                    "render_method": "alpha_test_to_opaque"
-                }
-            },
-            "minecraft:light_dampening": 8,
-            "minecraft:liquid_detection": {
-                "detection_rules": [
-                    {
-                        "liquid_type": "water",
-                        "on_liquid_touches": "no_reaction"
-                    }
-                ]
-            },
-            "minecraft:destructible_by_explosion": {
-                "explosion_resistance": 0
-            },
-            "minecraft:support": {
-                "shape": "stair"
-            },
-            "minecraft:connection_rule": {
-                "accepts_connections_from": "none"
-            },
-            "minecraft:redstone_conductivity": {
-                "redstone_conductor": true
-            },
-            "minecraft:loot": "loot_tables/cc/end/gilded_end_moss.loot.json",
-            "tag:minecraft:is_hoe_item_destructible": {},
-            "tag:minecraft:is_shears_item_destructible": {},
-            "minecraft:destructible_by_mining": {
-                "seconds_to_destroy": 0.2,
-                "item_specific_speeds": [
-                    {
-                        "item": {
-                            "tags": "query.all_tags('minecraft:is_hoe')"
-                        },
-                        "destroy_speed": 0.2
-                    },
-                    {
-                        "item": {
-                            "tags": "query.all_tags('minecraft:is_sword')"
-                        },
-                        "destroy_speed": 0.1333333333333333
-                    },
-                    {
-                        "item": {
-                            "tags": "query.all_tags('minecraft:is_shears')"
-                        },
-                        "destroy_speed": 0.0333333333333333
-                    }
-                ]
-            }
+  "format_version": "1.26.0",
+  "minecraft:block": {
+    "description": {
+      "identifier": "ct:gilded_end_moss",
+      "menu_category": {
+        "category": "nature",
+        "group": "minecraft:itemGroup.name.leaves"
+      },
+      "states": {
+        "ct:player_placed": [
+          false,
+          true
+        ],
+        "ct:update_bit": [
+          false,
+          true
+        ]
+      }
+    },
+    "components": {
+      "tag:ulkd_ess:tree_leaves_end_spire": {},
+      "minecraft:collision_box": true,
+      "minecraft:selection_box": true,
+      "minecraft:map_color": "#e2bc55",
+      "minecraft:geometry": {
+        "identifier": "geometry.full_block",
+        "culling": "ct:culling.leaves",
+        "culling_layer": "minecraft:culling_layer.leaves"
+      },
+      "minecraft:material_instances": {
+        "*": {
+          "texture": "ct:gilded_end_moss",
+          "render_method": "alpha_test_to_opaque"
         }
+      },
+      "minecraft:light_dampening": 8,
+      "minecraft:liquid_detection": {
+        "detection_rules": [
+          {
+            "liquid_type": "water",
+            "on_liquid_touches": "no_reaction"
+          }
+        ]
+      },
+      "minecraft:destructible_by_explosion": {
+        "explosion_resistance": 0
+      },
+      "minecraft:support": {
+        "shape": "stair"
+      },
+      "minecraft:connection_rule": {
+        "accepts_connections_from": "none"
+      },
+      "minecraft:redstone_conductivity": {
+        "redstone_conductor": true
+      },
+      "minecraft:loot": "loot_tables/cc/end/gilded_end_moss.loot.json",
+      "tag:minecraft:is_hoe_item_destructible": {},
+      "tag:minecraft:is_shears_item_destructible": {},
+      "minecraft:destructible_by_mining": {
+        "seconds_to_destroy": 0.2,
+        "item_specific_speeds": [
+          {
+            "item": {
+              "tags": "query.all_tags('minecraft:is_hoe')"
+            },
+            "destroy_speed": 0.2
+          },
+          {
+            "item": {
+              "tags": "query.all_tags('minecraft:is_sword')"
+            },
+            "destroy_speed": 0.1333333333333333
+          },
+          {
+            "item": {
+              "tags": "query.all_tags('minecraft:is_shears')"
+            },
+            "destroy_speed": 0.0333333333333333
+          }
+        ]
+      }
     }
+  }
 }

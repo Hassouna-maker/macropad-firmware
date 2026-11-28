@@ -46,8 +46,23 @@
     "ct:jungle_carpet_top": {
       "textures": "textures/cc/bloc/ju__ac6e_6ca3"
     },
+    "ct:coconut_grower": {
+      "textures": "textures/cc/bloc/coc_gro_0e65"
+    },
     "ct:icicles": {
       "textures": "textures/cc/bloc/icic_9859"
+    },
+    "ct:coconut_1": {
+      "textures": "textures/cc/bloc/coc_1_4a51"
+    },
+    "ct:coconut_2": {
+      "textures": "textures/cc/bloc/coc_2_2c1f"
+    },
+    "ct:coconut_3_sides": {
+      "textures": "textures/cc/bloc/co__c64c_4358"
+    },
+    "ct:coconut_3_top": {
+      "textures": "textures/cc/bloc/co__56e6_db25"
     },
     "ct:dry_bush": {
       "textures": "textures/cc/bloc/dry_bus_ca3a"
@@ -55,11 +70,35 @@
     "ct:jungle_roots": {
       "textures": "textures/cc/bloc/jun_roo_eee7"
     },
+    "ct:dripice_base": {
+      "textures": "textures/cc/bloc/dri_bas_450c"
+    },
+    "ct:dripice_tip": {
+      "textures": "textures/cc/bloc/dri_tip_5869"
+    },
+    "ct:dripice_merge": {
+      "textures": "textures/cc/bloc/dri_mer_ec9d"
+    },
+    "ct:dripice_middle": {
+      "textures": "textures/cc/bloc/dri_mid_0634"
+    },
+    "ct:dripice_merge_direction": {
+      "textures": "textures/cc/bloc/dr__c6e2_9640"
+    },
+    "ct:hanging_palm_leaves_middle": {
+      "textures": "textures/cc/bloc/ha__769b_8e42"
+    },
+    "ct:hanging_palm_leaves_tip": {
+      "textures": "textures/cc/bloc/ha__34a2_5656"
+    },
     "ct:end_twister_top": {
       "textures": "textures/cc/bloc/en__9905_e001"
     },
     "ct:end_twister_base": {
       "textures": "textures/cc/bloc/en__a870_5f00"
+    },
+    "ct:invisible": {
+      "textures": "textures/cc/misc/invi_923d"
     },
     "ct:gilded_end_grass_block_side": {
       "textures": "textures/cc/bloc/gi__d502_4192"
@@ -87,6 +126,21 @@
     },
     "ct:end_mud": {
       "textures": "textures/cc/bloc/end_mud_075e"
+    },
+    "ct:end_stone_spike_base": {
+      "textures": "textures/cc/bloc/en__93b0_066f"
+    },
+    "ct:end_stone_spike_tip": {
+      "textures": "textures/cc/bloc/en__58ad_16f5"
+    },
+    "ct:end_stone_spike_merge": {
+      "textures": "textures/cc/bloc/en__3129_5f28"
+    },
+    "ct:end_stone_spike_middle": {
+      "textures": "textures/cc/bloc/en__66e3_dc94"
+    },
+    "ct:end_stone_spike_merge_direction": {
+      "textures": "textures/cc/bloc/en__3029_991e"
     },
     "ct:smooth_end_stone": {
       "textures": "textures/cc/bloc/sm__1388_b14a"
@@ -117,6 +171,12 @@
     },
     "ct:palm_leaves": {
       "textures": "textures/cc/bloc/pal_lea_b0ee"
+    },
+    "ct:palm_log_side": {
+      "textures": "textures/cc/bloc/pal_sid_46dc"
+    },
+    "ct:palm_log_top": {
+      "textures": "textures/cc/bloc/pal_top_f291"
     }
   }
 }

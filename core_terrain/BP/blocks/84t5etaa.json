@@ -1,0 +1,674 @@
+{
+  "format_version": "1.26.0",
+  "minecraft:block": {
+    "description": {
+      "identifier": "ct:coconut",
+      "menu_category": {
+        "category": "construction",
+        "group": "ct:itemGroup.name.trinket"
+      },
+      "states": {
+        "ct:facing": [
+          "north",
+          "east",
+          "south",
+          "west",
+          "up",
+          "down"
+        ],
+        "ct:grow_state": [
+          1,
+          2,
+          3
+        ],
+        "ct:hand_placed": [
+          true,
+          false
+        ]
+      }
+    },
+    "components": {
+      "tag:ct:disable_silk_touch": {},
+      "minecraft:precipitation_interactions": {
+        "precipitation_behavior": "none"
+      },
+      "minecraft:liquid_detection": {
+        "detection_rules": [
+          {
+            "on_liquid_touches": "popped"
+          }
+        ]
+      },
+      "tag:plant": {},
+      "tag:nonsolid": {},
+      "minecraft:destructible_by_mining": {
+        "seconds_to_destroy": 0.0
+      },
+      "minecraft:destructible_by_explosion": {
+        "explosion_resistance": 0
+      },
+      "minecraft:geometry": "geometry.coconut.3",
+      "minecraft:material_instances": {
+        "*": {
+          "texture": "ct:coconut_3_sides",
+          "render_method": "opaque"
+        },
+        "up": {
+          "texture": "ct:coconut_3_top",
+          "render_method": "opaque"
+        }
+      },
+      "minecraft:collision_box": {
+        "origin": [
+          -8,
+          0,
+          -8
+        ],
+        "size": [
+          16,
+          16,
+          16
+        ]
+      },
+      "minecraft:selection_box": {
+        "origin": [
+          -8,
+          0,
+          -8
+        ],
+        "size": [
+          16,
+          16,
+          16
+        ]
+      },
+      "minecraft:light_dampening": 0,
+      "minecraft:map_color": "#775329",
+      "minecraft:loot": "loot_tables/empty.json",
+      "minecraft:support": {
+        "shape": "stair"
+      },
+      "minecraft:connection_rule": {
+        "accepts_connections_from": "none"
+      },
+      "minecraft:redstone_conductivity": {
+        "redstone_conductor": true
+      }
+    },
+    "permutations": [
+      {
+        "condition": "q.block_state('ct:hand_placed') == 1",
+        "components": {
+          "minecraft:transformation": {
+            "translation": [
+              0,
+              -0.15,
+              -0.25
+            ]
+          },
+          "minecraft:collision_box": {
+            "origin": [
+              -4,
+              3,
+              0
+            ],
+            "size": [
+              8,
+              8,
+              8
+            ]
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -4,
+              3,
+              0
+            ],
+            "size": [
+              8,
+              8,
+              8
+            ]
+          },
+          "minecraft:geometry": "geometry.coconut.3",
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:coconut_3_sides",
+              "render_method": "alpha_test"
+            },
+            "up": {
+              "texture": "ct:coconut_3_top",
+              "render_method": "alpha_test"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:facing') == 'north' && query.block_state('ct:grow_state') == 1 && q.block_state('ct:hand_placed') == 0",
+        "components": {
+          "minecraft:collision_box": {
+            "origin": [
+              -2,
+              6,
+              4
+            ],
+            "size": [
+              4,
+              4,
+              4
+            ]
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -2,
+              6,
+              4
+            ],
+            "size": [
+              4,
+              4,
+              4
+            ]
+          },
+          "minecraft:transformation": {
+            "rotation": [
+              0,
+              0,
+              0
+            ]
+          },
+          "minecraft:geometry": "geometry.coconut.1",
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:coconut_1",
+              "render_method": "alpha_test"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:facing') == 'north' && query.block_state('ct:grow_state') == 2 && q.block_state('ct:hand_placed') == 0",
+        "components": {
+          "minecraft:collision_box": {
+            "origin": [
+              -3,
+              6,
+              2
+            ],
+            "size": [
+              6,
+              6,
+              6
+            ]
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -3,
+              6,
+              2
+            ],
+            "size": [
+              6,
+              6,
+              6
+            ]
+          },
+          "minecraft:transformation": {
+            "rotation": [
+              0,
+              0,
+              0
+            ]
+          },
+          "minecraft:geometry": "geometry.coconut.2",
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:coconut_2",
+              "render_method": "alpha_test"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:facing') == 'north' && query.block_state('ct:grow_state') == 3 && q.block_state('ct:hand_placed') == 0",
+        "components": {
+          "minecraft:collision_box": {
+            "origin": [
+              -4,
+              3,
+              0
+            ],
+            "size": [
+              8,
+              8,
+              8
+            ]
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -4,
+              3,
+              0
+            ],
+            "size": [
+              8,
+              8,
+              8
+            ]
+          },
+          "minecraft:transformation": {
+            "rotation": [
+              0,
+              0,
+              0
+            ]
+          },
+          "minecraft:geometry": "geometry.coconut.3",
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:coconut_3_sides",
+              "render_method": "alpha_test"
+            },
+            "up": {
+              "texture": "ct:coconut_3_top",
+              "render_method": "alpha_test"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:facing') == 'east' && query.block_state('ct:grow_state') == 1 && q.block_state('ct:hand_placed') == 0",
+        "components": {
+          "minecraft:collision_box": {
+            "origin": [
+              -2,
+              6,
+              4
+            ],
+            "size": [
+              4,
+              4,
+              4
+            ]
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -2,
+              6,
+              4
+            ],
+            "size": [
+              4,
+              4,
+              4
+            ]
+          },
+          "minecraft:transformation": {
+            "rotation": [
+              0,
+              -90,
+              0
+            ]
+          },
+          "minecraft:geometry": "geometry.coconut.1",
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:coconut_1",
+              "render_method": "alpha_test"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:facing') == 'east' && query.block_state('ct:grow_state') == 2 && q.block_state('ct:hand_placed') == 0",
+        "components": {
+          "minecraft:collision_box": {
+            "origin": [
+              -3,
+              6,
+              2
+            ],
+            "size": [
+              6,
+              6,
+              6
+            ]
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -3,
+              6,
+              2
+            ],
+            "size": [
+              6,
+              6,
+              6
+            ]
+          },
+          "minecraft:transformation": {
+            "rotation": [
+              0,
+              -90,
+              0
+            ]
+          },
+          "minecraft:geometry": "geometry.coconut.2",
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:coconut_2",
+              "render_method": "alpha_test"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:facing') == 'east' && query.block_state('ct:grow_state') == 3 && q.block_state('ct:hand_placed') == 0",
+        "components": {
+          "minecraft:collision_box": {
+            "origin": [
+              -4,
+              3,
+              0
+            ],
+            "size": [
+              8,
+              8,
+              8
+            ]
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -4,
+              3,
+              0
+            ],
+            "size": [
+              8,
+              8,
+              8
+            ]
+          },
+          "minecraft:transformation": {
+            "rotation": [
+              0,
+              -90,
+              0
+            ]
+          },
+          "minecraft:geometry": "geometry.coconut.3",
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:coconut_3_sides",
+              "render_method": "alpha_test"
+            },
+            "up": {
+              "texture": "ct:coconut_3_top",
+              "render_method": "alpha_test"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:facing') == 'south' && query.block_state('ct:grow_state') == 1 && q.block_state('ct:hand_placed') == 0",
+        "components": {
+          "minecraft:collision_box": {
+            "origin": [
+              -2,
+              6,
+              4
+            ],
+            "size": [
+              4,
+              4,
+              4
+            ]
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -2,
+              6,
+              4
+            ],
+            "size": [
+              4,
+              4,
+              4
+            ]
+          },
+          "minecraft:transformation": {
+            "rotation": [
+              0,
+              180,
+              0
+            ]
+          },
+          "minecraft:geometry": "geometry.coconut.1",
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:coconut_1",
+              "render_method": "alpha_test"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:facing') == 'south' && query.block_state('ct:grow_state') == 2 && q.block_state('ct:hand_placed') == 0",
+        "components": {
+          "minecraft:selection_box": {
+            "origin": [
+              -3,
+              6,
+              2
+            ],
+            "size": [
+              6,
+              6,
+              6
+            ]
+          },
+          "minecraft:transformation": {
+            "rotation": [
+              0,
+              180,
+              0
+            ]
+          },
+          "minecraft:geometry": "geometry.coconut.2",
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:coconut_2",
+              "render_method": "alpha_test"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:facing') == 'south' && query.block_state('ct:grow_state') == 3 && q.block_state('ct:hand_placed') == 0",
+        "components": {
+          "minecraft:collision_box": {
+            "origin": [
+              -4,
+              3,
+              0
+            ],
+            "size": [
+              8,
+              8,
+              8
+            ]
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -4,
+              3,
+              0
+            ],
+            "size": [
+              8,
+              8,
+              8
+            ]
+          },
+          "minecraft:transformation": {
+            "rotation": [
+              0,
+              180,
+              0
+            ]
+          },
+          "minecraft:geometry": "geometry.coconut.3",
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:coconut_3_sides",
+              "render_method": "alpha_test"
+            },
+            "up": {
+              "texture": "ct:coconut_3_top",
+              "render_method": "alpha_test"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:facing') == 'west' && query.block_state('ct:grow_state') == 1 && q.block_state('ct:hand_placed') == 0",
+        "components": {
+          "minecraft:collision_box": {
+            "origin": [
+              -2,
+              6,
+              4
+            ],
+            "size": [
+              4,
+              4,
+              4
+            ]
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -2,
+              6,
+              4
+            ],
+            "size": [
+              4,
+              4,
+              4
+            ]
+          },
+          "minecraft:transformation": {
+            "rotation": [
+              0,
+              90,
+              0
+            ]
+          },
+          "minecraft:geometry": "geometry.coconut.1",
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:coconut_1",
+              "render_method": "alpha_test"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:facing') == 'west' && query.block_state('ct:grow_state') == 2 && q.block_state('ct:hand_placed') == 0",
+        "components": {
+          "minecraft:collision_box": {
+            "origin": [
+              -3,
+              6,
+              2
+            ],
+            "size": [
+              6,
+              6,
+              6
+            ]
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -3,
+              6,
+              2
+            ],
+            "size": [
+              6,
+              6,
+              6
+            ]
+          },
+          "minecraft:transformation": {
+            "rotation": [
+              0,
+              90,
+              0
+            ]
+          },
+          "minecraft:geometry": "geometry.coconut.2",
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:coconut_2",
+              "render_method": "alpha_test"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:facing') == 'west' && query.block_state('ct:grow_state') == 3 && q.block_state('ct:hand_placed') == 0",
+        "components": {
+          "minecraft:collision_box": {
+            "origin": [
+              -4,
+              3,
+              0
+            ],
+            "size": [
+              8,
+              8,
+              8
+            ]
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -4,
+              3,
+              0
+            ],
+            "size": [
+              8,
+              8,
+              8
+            ]
+          },
+          "minecraft:transformation": {
+            "rotation": [
+              0,
+              90,
+              0
+            ]
+          },
+          "minecraft:geometry": "geometry.coconut.3",
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:coconut_3_sides",
+              "render_method": "alpha_test"
+            },
+            "up": {
+              "texture": "ct:coconut_3_top",
+              "render_method": "alpha_test"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:grow_state') == 3",
+        "components": {
+          "minecraft:loot": "loot_tables/cc/crops/coconut.loot.json"
+        }
+      }
+    ]
+  }
+}

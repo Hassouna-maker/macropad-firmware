@@ -36,6 +36,9 @@
   "ct:endergloom_short_grass": {
     "sound": "moss_block"
   },
+  "ct:palm_log": {
+    "sound": "wood"
+  },
   "ct:palm_sapling": {
     "sound": "grass"
   },
@@ -83,6 +86,9 @@
   "ct:end_twister": {
     "sound": "weeping_vines"
   },
+  "ct:dripice": {
+    "sound": "amethyst_cluster"
+  },
   "ct:icicles": {
     "sound": "amethyst_cluster"
   },
@@ -103,6 +109,9 @@
       "down": "ct:jungle_roots"
     }
   },
+  "ct:hanging_palm_leaves": {
+    "sound": "moss_block"
+  },
   "ct:pebbles": {
     "sound": "stone"
   },
@@ -111,6 +120,12 @@
   },
   "ct:shells": {
     "sound": "stone"
+  },
+  "ct:coconut": {
+    "sound": "bamboo_wood"
+  },
+  "ct:coconut_spawner": {
+    "sound": "wood"
   },
   "ct:end_mud": {
     "textures": {

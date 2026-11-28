@@ -7,11 +7,13 @@
         "category": "none"
       },
       "states": {
-        "ct:connect": ["end", "inner"]
+        "ct:connect": [
+          "end",
+          "inner"
+        ]
       }
     },
     "components": {
-      "ct:growing_plant": {},
       "tag:plant": {},
       "tag:vine": {},
       "tag:nonsolid": {},
@@ -32,8 +34,16 @@
       },
       "minecraft:collision_box": false,
       "minecraft:selection_box": {
-        "origin": [-4, 0, -4],
-        "size": [8, 15, 8]
+        "origin": [
+          -4,
+          0,
+          -4
+        ],
+        "size": [
+          8,
+          15,
+          8
+        ]
       },
       "minecraft:light_dampening": 0,
       "minecraft:map_color": "#C47B27",
@@ -70,13 +80,23 @@
             }
           },
           "minecraft:selection_box": {
-            "origin": [-4, 0, -4],
-            "size": [8, 16, 8]
+            "origin": [
+              -4,
+              0,
+              -4
+            ],
+            "size": [
+              8,
+              16,
+              8
+            ]
           },
           "minecraft:placement_filter": {
             "conditions": [
               {
-                "allowed_faces": ["up"],
+                "allowed_faces": [
+                  "up"
+                ],
                 "block_filter": [
                   {
                     "name": "ct:end_twister"
@@ -105,7 +125,9 @@
           "minecraft:placement_filter": {
             "conditions": [
               {
-                "allowed_faces": ["up"],
+                "allowed_faces": [
+                  "up"
+                ],
                 "block_filter": [
                   {
                     "name": "ct:end_twister"

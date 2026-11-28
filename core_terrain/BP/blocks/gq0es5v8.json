@@ -1,0 +1,369 @@
+{
+  "format_version": "1.26.0",
+  "minecraft:block": {
+    "description": {
+      "identifier": "ct:end_stone_spike",
+      "menu_category": {
+        "category": "none"
+      },
+      "states": {
+        "ct:variant": [
+          "tip",
+          "base",
+          "merge",
+          "middle",
+          "merge_direction"
+        ]
+      },
+      "traits": {
+        "minecraft:placement_position": {
+          "enabled_states": [
+            "minecraft:block_face"
+          ]
+        }
+      }
+    },
+    "components": {
+      "minecraft:movable": {
+        "movement_type": "popped"
+      },
+      "minecraft:precipitation_interactions": {
+        "precipitation_behavior": "none"
+      },
+      "minecraft:destruction_particles": {
+        "texture": "end_stone"
+      },
+      "tag:nonsolid": {},
+      "minecraft:destructible_by_explosion": {
+        "explosion_resistance": 0
+      },
+      "minecraft:geometry": "minecraft:geometry.cross",
+      "minecraft:material_instances": {
+        "*": {
+          "texture": "ct:invisible",
+          "render_method": "alpha_test_single_sided",
+          "ambient_occlusion": false,
+          "face_dimming": true
+        }
+      },
+      "minecraft:selection_box": {
+        "origin": [
+          -8,
+          0,
+          -8
+        ],
+        "size": [
+          16,
+          16,
+          16
+        ]
+      },
+      "minecraft:collision_box": {
+        "origin": [
+          -8,
+          0,
+          -8
+        ],
+        "size": [
+          16,
+          16,
+          16
+        ]
+      },
+      "minecraft:light_dampening": 0,
+      "minecraft:map_color": "#dfd38f",
+      "minecraft:liquid_detection": {
+        "detection_rules": [
+          {
+            "on_liquid_touches": "blocking",
+            "can_contain_liquid": true
+          }
+        ]
+      },
+      "minecraft:support": {
+        "shape": "stair"
+      },
+      "minecraft:connection_rule": {
+        "accepts_connections_from": "none"
+      },
+      "tag:minecraft:is_pickaxe_item_destructible": {},
+      "minecraft:destructible_by_mining": {
+        "seconds_to_destroy": 10,
+        "item_specific_speeds": [
+          {
+            "item": {
+              "tags": "query.all_tags('minecraft:is_pickaxe')"
+            },
+            "destroy_speed": 3
+          }
+        ]
+      }
+    },
+    "permutations": [
+      {
+        "condition": "q.block_state('minecraft:block_face') == 'up'",
+        "components": {
+          "minecraft:precipitation_interactions": {
+            "precipitation_behavior": "none"
+          },
+          "minecraft:transformation": {
+            "rotation": [
+              180,
+              0,
+              0
+            ]
+          },
+          "minecraft:placement_filter": {
+            "conditions": [
+              {
+                "allowed_faces": [
+                  "up"
+                ],
+                "block_filter": [
+                  "minecraft:stone",
+                  "ct:end_stone_spike",
+                  "ct:end_mud",
+                  "minecraft:end_stone",
+                  "ct:smooth_end_stone"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('minecraft:block_face') == 'down'",
+        "components": {
+          "minecraft:precipitation_interactions": {
+            "precipitation_behavior": "none"
+          },
+          "minecraft:transformation": {
+            "rotation": [
+              0,
+              0,
+              0
+            ]
+          },
+          "minecraft:placement_filter": {
+            "conditions": [
+              {
+                "allowed_faces": [
+                  "up",
+                  "down"
+                ],
+                "block_filter": [
+                  "minecraft:stone",
+                  "ct:end_stone_spike",
+                  "minecraft:air",
+                  "ct:end_mud",
+                  "minecraft:end_stone",
+                  "ct:smooth_end_stone"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('ct:variant') == 'base'",
+        "components": {
+          "minecraft:precipitation_interactions": {
+            "precipitation_behavior": "none"
+          },
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:end_stone_spike_base",
+              "render_method": "alpha_test_single_sided",
+              "face_dimming": false,
+              "ambient_occlusion": true
+            }
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -6,
+              0,
+              -6
+            ],
+            "size": [
+              12,
+              16,
+              12
+            ]
+          },
+          "minecraft:collision_box": {
+            "origin": [
+              -6,
+              0,
+              -6
+            ],
+            "size": [
+              12,
+              16,
+              12
+            ]
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('ct:variant') == 'tip'",
+        "components": {
+          "minecraft:precipitation_interactions": {
+            "precipitation_behavior": "none"
+          },
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:end_stone_spike_tip",
+              "render_method": "alpha_test_single_sided",
+              "face_dimming": false,
+              "ambient_occlusion": true
+            }
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -3,
+              5,
+              -3
+            ],
+            "size": [
+              6,
+              11,
+              6
+            ]
+          },
+          "minecraft:collision_box": {
+            "origin": [
+              -3,
+              5,
+              -3
+            ],
+            "size": [
+              6,
+              11,
+              6
+            ]
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('ct:variant') == 'merge'",
+        "components": {
+          "minecraft:precipitation_interactions": {
+            "precipitation_behavior": "none"
+          },
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:end_stone_spike_merge",
+              "render_method": "alpha_test_single_sided",
+              "face_dimming": false,
+              "ambient_occlusion": true
+            }
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -4,
+              0,
+              -4
+            ],
+            "size": [
+              8,
+              16,
+              8
+            ]
+          },
+          "minecraft:collision_box": {
+            "origin": [
+              -4,
+              0,
+              -4
+            ],
+            "size": [
+              8,
+              16,
+              8
+            ]
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('ct:variant') == 'middle'",
+        "components": {
+          "minecraft:precipitation_interactions": {
+            "precipitation_behavior": "none"
+          },
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:end_stone_spike_middle",
+              "render_method": "alpha_test_single_sided",
+              "face_dimming": false,
+              "ambient_occlusion": true
+            }
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -5,
+              0,
+              -5
+            ],
+            "size": [
+              10,
+              16,
+              10
+            ]
+          },
+          "minecraft:collision_box": {
+            "origin": [
+              -5,
+              0,
+              -5
+            ],
+            "size": [
+              10,
+              16,
+              10
+            ]
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('ct:variant') == 'merge_direction'",
+        "components": {
+          "minecraft:precipitation_interactions": {
+            "precipitation_behavior": "none"
+          },
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:end_stone_spike_merge_direction",
+              "render_method": "alpha_test_single_sided",
+              "face_dimming": false,
+              "ambient_occlusion": true
+            }
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -4,
+              0,
+              -4
+            ],
+            "size": [
+              8,
+              16,
+              8
+            ]
+          },
+          "minecraft:collision_box": {
+            "origin": [
+              -4,
+              0,
+              -4
+            ],
+            "size": [
+              8,
+              16,
+              8
+            ]
+          }
+        }
+      }
+    ]
+  }
+}
