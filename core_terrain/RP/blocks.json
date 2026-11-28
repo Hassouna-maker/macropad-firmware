@@ -390,5 +390,8 @@
   },
   "ct:moss_layer": {
     "sound": "moss_block"
+  },
+  "ct:coarse_dirt_layer": {
+    "sound": "gravel"
   }
 }

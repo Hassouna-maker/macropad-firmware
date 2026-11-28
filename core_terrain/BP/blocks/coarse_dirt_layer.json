@@ -1,0 +1,298 @@
+{
+  "format_version": "1.26.0",
+  "minecraft:block": {
+    "description": {
+      "identifier": "ct:coarse_dirt_layer",
+      "menu_category": {
+        "category": "nature",
+        "group": "minecraft:itemGroup.name.dirt"
+      },
+      "states": {
+        "ct:layer": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      }
+    },
+    "components": {
+      "minecraft:geometry": "geometry.ct.layer_3",
+      "minecraft:collision_box": {
+        "origin": [
+          -8,
+          0,
+          -8
+        ],
+        "size": [
+          16,
+          6,
+          16
+        ]
+      },
+      "minecraft:selection_box": {
+        "origin": [
+          -8,
+          0,
+          -8
+        ],
+        "size": [
+          16,
+          8,
+          16
+        ]
+      },
+      "minecraft:material_instances": {
+        "*": {
+          "texture": "coarse_dirt",
+          "render_method": "opaque"
+        }
+      },
+      "minecraft:light_dampening": 0,
+      "minecraft:map_color": "#7A5B3A",
+      "minecraft:destructible_by_mining": {
+        "seconds_to_destroy": 0.2
+      },
+      "minecraft:destructible_by_explosion": {
+        "explosion_resistance": 0
+      },
+      "tag:dirt": {},
+      "tag:minecraft:is_shovel_item_destructible": {}
+    },
+    "permutations": [
+      {
+        "condition": "q.block_state('ct:layer') == 0",
+        "components": {
+          "minecraft:geometry": "geometry.ct.layer_0",
+          "minecraft:selection_box": {
+            "origin": [
+              -8,
+              0,
+              -8
+            ],
+            "size": [
+              16,
+              2,
+              16
+            ]
+          },
+          "minecraft:collision_box": false
+        }
+      },
+      {
+        "condition": "q.block_state('ct:layer') == 1",
+        "components": {
+          "minecraft:geometry": "geometry.ct.layer_1",
+          "minecraft:selection_box": {
+            "origin": [
+              -8,
+              0,
+              -8
+            ],
+            "size": [
+              16,
+              4,
+              16
+            ]
+          },
+          "minecraft:collision_box": {
+            "origin": [
+              -8,
+              0,
+              -8
+            ],
+            "size": [
+              16,
+              2,
+              16
+            ]
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('ct:layer') == 2",
+        "components": {
+          "minecraft:geometry": "geometry.ct.layer_2",
+          "minecraft:selection_box": {
+            "origin": [
+              -8,
+              0,
+              -8
+            ],
+            "size": [
+              16,
+              6,
+              16
+            ]
+          },
+          "minecraft:collision_box": {
+            "origin": [
+              -8,
+              0,
+              -8
+            ],
+            "size": [
+              16,
+              4,
+              16
+            ]
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('ct:layer') == 3",
+        "components": {
+          "minecraft:geometry": "geometry.ct.layer_3",
+          "minecraft:selection_box": {
+            "origin": [
+              -8,
+              0,
+              -8
+            ],
+            "size": [
+              16,
+              8,
+              16
+            ]
+          },
+          "minecraft:collision_box": {
+            "origin": [
+              -8,
+              0,
+              -8
+            ],
+            "size": [
+              16,
+              6,
+              16
+            ]
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('ct:layer') == 4",
+        "components": {
+          "minecraft:geometry": "geometry.ct.layer_4",
+          "minecraft:selection_box": {
+            "origin": [
+              -8,
+              0,
+              -8
+            ],
+            "size": [
+              16,
+              10,
+              16
+            ]
+          },
+          "minecraft:collision_box": {
+            "origin": [
+              -8,
+              0,
+              -8
+            ],
+            "size": [
+              16,
+              8,
+              16
+            ]
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('ct:layer') == 5",
+        "components": {
+          "minecraft:geometry": "geometry.ct.layer_5",
+          "minecraft:selection_box": {
+            "origin": [
+              -8,
+              0,
+              -8
+            ],
+            "size": [
+              16,
+              12,
+              16
+            ]
+          },
+          "minecraft:collision_box": {
+            "origin": [
+              -8,
+              0,
+              -8
+            ],
+            "size": [
+              16,
+              10,
+              16
+            ]
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('ct:layer') == 6",
+        "components": {
+          "minecraft:geometry": "geometry.ct.layer_6",
+          "minecraft:selection_box": {
+            "origin": [
+              -8,
+              0,
+              -8
+            ],
+            "size": [
+              16,
+              14,
+              16
+            ]
+          },
+          "minecraft:collision_box": {
+            "origin": [
+              -8,
+              0,
+              -8
+            ],
+            "size": [
+              16,
+              12,
+              16
+            ]
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('ct:layer') == 7",
+        "components": {
+          "minecraft:geometry": "geometry.ct.layer_7",
+          "minecraft:selection_box": {
+            "origin": [
+              -8,
+              0,
+              -8
+            ],
+            "size": [
+              16,
+              16,
+              16
+            ]
+          },
+          "minecraft:collision_box": {
+            "origin": [
+              -8,
+              0,
+              -8
+            ],
+            "size": [
+              16,
+              14,
+              16
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

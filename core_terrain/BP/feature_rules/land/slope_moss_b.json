@@ -2,8 +2,8 @@
   "format_version": "1.20.30",
   "minecraft:feature_rules": {
     "description": {
-      "identifier": "ct:land_dirt_band2",
-      "places_feature": "ct:land/dirt_h2"
+      "identifier": "ct:land_slope_moss_b",
+      "places_feature": "ct:land/moss_h2"
     },
     "conditions": {
       "placement_pass": "final_pass",
@@ -17,7 +17,7 @@
           {
             "test": "has_biome_tag",
             "operator": "==",
-            "value": "plains"
+            "value": "taiga"
           },
           {
             "test": "has_biome_tag",
@@ -27,12 +27,7 @@
           {
             "test": "has_biome_tag",
             "operator": "==",
-            "value": "taiga"
-          },
-          {
-            "test": "has_biome_tag",
-            "operator": "==",
-            "value": "extreme_hills"
+            "value": "swamp"
           }
         ]
       }
@@ -47,7 +42,7 @@
           15
         ]
       },
-      "y": "(((math.sin(v.worldx*3.7 + 40) + math.sin(v.worldz*4.3 + 110) + math.sin((v.worldx - v.worldz)*2.9)) / 3) > 0.8) ? (q.heightmap(v.worldx, v.worldz)) : -100",
+      "y": "((((math.sin(v.worldx*2.9 + 200) + math.sin(v.worldz*3.4 + 20) + math.sin((v.worldx + v.worldz)*2.3 + 90)) / 3) > 0.3) && ((math.max(math.max(q.heightmap(v.worldx + (1), v.worldz + (0)), q.heightmap(v.worldx + (-1), v.worldz + (0))), math.max(q.heightmap(v.worldx + (0), v.worldz + (1)), q.heightmap(v.worldx + (0), v.worldz + (-1)))) - q.heightmap(v.worldx, v.worldz)) <= 0 && (math.max(math.max(q.heightmap(v.worldx + (2), v.worldz + (0)), q.heightmap(v.worldx + (-2), v.worldz + (0))), math.max(q.heightmap(v.worldx + (0), v.worldz + (2)), q.heightmap(v.worldx + (0), v.worldz + (-2)))) - q.heightmap(v.worldx, v.worldz)) == 1)) ? (q.heightmap(v.worldx, v.worldz)) : -100",
       "z": {
         "distribution": "fixed_grid",
         "extent": [

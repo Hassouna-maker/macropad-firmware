@@ -1,0 +1,28 @@
+{
+  "format_version": "1.20.10",
+  "minecraft:recipe_shaped": {
+    "description": {
+      "identifier": "ct:grass_layer_recipe"
+    },
+    "tags": [
+      "crafting_table"
+    ],
+    "pattern": [
+      "###"
+    ],
+    "key": {
+      "#": {
+        "item": "minecraft:grass_block"
+      }
+    },
+    "result": {
+      "item": "ct:grass_layer",
+      "count": 6
+    },
+    "unlock": [
+      {
+        "item": "minecraft:grass_block"
+      }
+    ]
+  }
+}

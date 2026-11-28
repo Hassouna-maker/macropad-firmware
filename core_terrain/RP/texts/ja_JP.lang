@@ -1,4 +1,4 @@
-pack.name=Core Terrain v1.7.0
+pack.name=Core Terrain v1.8.0
 pack.description=Terrain, biomes and trees extracted from Core Craft
 tile.ct:smooth_end_stone.name=滑らかなエンドストーン
 item.ct:smooth_end_stone=滑らかなエンドストーン
@@ -352,3 +352,6 @@ item.ct:dirt_layer=Dirt Layer
 
 tile.ct:moss_layer.name=Moss Layer
 item.ct:moss_layer=Moss Layer
+
+tile.ct:coarse_dirt_layer.name=Coarse Dirt Layer
+item.ct:coarse_dirt_layer=Coarse Dirt Layer
