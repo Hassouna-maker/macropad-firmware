@@ -1,0 +1,59 @@
+{
+  "resource_pack_name": "pack.name",
+  "texture_name": "atlas.terrain",
+  "padding": 8,
+  "num_mip_levels": 4,
+  "texture_data": {
+    "ct:shells_1": {
+      "textures": "textures/cc/bloc/she_1_a97c"
+    },
+    "ct:shells_2": {
+      "textures": "textures/cc/bloc/she_2_1ca4"
+    },
+    "ct:shells_3": {
+      "textures": "textures/cc/bloc/she_3_f770"
+    },
+    "ct:shells_4": {
+      "textures": "textures/cc/bloc/she_4_538b"
+    },
+    "ct:lavender": {
+      "textures": "textures/cc/bloc/lave_a393"
+    },
+    "ct:lavender_stem": {
+      "textures": "textures/cc/bloc/lav_ste_ca19"
+    },
+    "ct:dry_grass": {
+      "textures": "textures/cc/bloc/dry_gra_8c0b"
+    },
+    "ct:dry_grass_stem": {
+      "textures": "textures/cc/bloc/dr__8710_f734"
+    },
+    "ct:dry_tall_grass": {
+      "textures": "textures/cc/bloc/dr__edf9_01b5"
+    },
+    "ct:dry_tall_grass_stem": {
+      "textures": "textures/cc/bloc/dr__6191_a8a6"
+    },
+    "ct:jungle_carpet_side": {
+      "textures": "textures/cc/bloc/ju__b993_ea9d"
+    },
+    "ct:jungle_carpet_top": {
+      "textures": "textures/cc/bloc/ju__ac6e_6ca3"
+    },
+    "ct:umbral_end_stone": {
+      "textures": "textures/cc/bloc/um__0958_f748"
+    },
+    "ct:cobbled_umbral_end_stone": {
+      "textures": "textures/cc/bloc/co__5b21_1891"
+    },
+    "ct:gilded_end_stone": {
+      "textures": "textures/cc/bloc/gi__1a50_fd7f"
+    },
+    "ct:snowy_grass_stem": {
+      "textures": "textures/cc/bloc/sn__3e3d_4f88"
+    },
+    "ct:snowy_grass": {
+      "textures": "textures/cc/bloc/sno_gra_b2b8"
+    }
+  }
+}

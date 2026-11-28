@@ -1,0 +1,13 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:scatter_feature": {
+    "description": {
+      "identifier": "ct:terrain_elevation/umbral_end_cliff_level_4_top_1"
+    },
+    "places_feature": "ct:terrain_elevation/place_umbral_end_cliff_top_1",
+    "iterations": "((t.top_layers_enabled == 1 && t.elev_height >= 4 && (t.elev_height - 4) == 0) ? 1 : 0)",
+    "x": 0,
+    "y": "t.elev_offset + 3",
+    "z": 0
+  }
+}

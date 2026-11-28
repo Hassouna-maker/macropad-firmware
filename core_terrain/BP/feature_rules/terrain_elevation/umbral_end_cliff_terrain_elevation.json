@@ -1,0 +1,39 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:feature_rules": {
+    "description": {
+      "identifier": "ct:umbral_end_cliff_terrain_elevation",
+      "places_feature": "ct:terrain_elevation/det_umbral_end_cliff"
+    },
+    "conditions": {
+      "placement_pass": "first_pass",
+      "minecraft:biome_filter": {
+        "all_of": [
+          {
+            "test": "has_biome_tag",
+            "value": "the_end",
+            "operator": "=="
+          }
+        ]
+      }
+    },
+    "distribution": {
+      "iterations": 256,
+      "x": {
+        "distribution": "fixed_grid",
+        "extent": [
+          0,
+          15
+        ]
+      },
+      "y": "((q.heightmap(v.worldx, v.worldz) - 1 < 10) ? 10 : ((q.heightmap(v.worldx, v.worldz) - 1 > 120) ? 120 : q.heightmap(v.worldx, v.worldz) - 1))",
+      "z": {
+        "distribution": "fixed_grid",
+        "extent": [
+          0,
+          15
+        ]
+      }
+    }
+  }
+}

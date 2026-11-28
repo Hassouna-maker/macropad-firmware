@@ -1,0 +1,18 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:weighted_random_feature": {
+    "description": {
+      "identifier": "ct:terrain_elevation/place_gilded_end_cliff_top_4"
+    },
+    "features": [
+      [
+        "ct:terrain_elevation/place_gilded_end_cliff_top_4_1",
+        2
+      ],
+      [
+        "ct:terrain_elevation/place_gilded_end_cliff_top_4_2",
+        1
+      ]
+    ]
+  }
+}

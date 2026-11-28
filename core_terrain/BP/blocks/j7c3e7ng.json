@@ -1,0 +1,46 @@
+{
+    "format_version": "1.26.0",
+    "minecraft:block": {
+        "description": {
+            "identifier": "ct:endergloom_grass_block",
+            "menu_category": {
+                "category": "nature"
+            }
+        },
+        "components": {
+            "tag:solid": {},
+            "tag:end_grass": {},
+            "tag:grass": {},
+            "minecraft:collision_box": true,
+            "minecraft:selection_box": true,
+            "minecraft:map_color": "#882b91",
+            "minecraft:destructible_by_explosion": {
+                "explosion_resistance": 0
+            },
+            "minecraft:redstone_conductivity": {
+                "redstone_conductor": true
+            },
+            "minecraft:light_dampening": 15,
+            "minecraft:liquid_detection": {
+                "detection_rules": [
+                    {
+                        "liquid_type": "water",
+                        "on_liquid_touches": "no_reaction"
+                    }
+                ]
+            },
+            "tag:minecraft:is_shovel_item_destructible": {},
+            "minecraft:destructible_by_mining": {
+                "seconds_to_destroy": 0.5,
+                "item_specific_speeds": [
+                    {
+                        "item": {
+                            "tags": "query.all_tags('minecraft:is_shovel')"
+                        },
+                        "destroy_speed": 0.5333
+                    }
+                ]
+            }
+        }
+    }
+}

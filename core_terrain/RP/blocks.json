@@ -1,0 +1,86 @@
+{
+  "format_version": "1.19.20",
+  "ct:umbral_end_stone": {
+    "textures": {
+      "side": "ct:umbral_end_stone",
+      "up": "ct:umbral_end_stone",
+      "down": "ct:umbral_end_stone"
+    },
+    "sound": "stone"
+  },
+  "ct:cobbled_umbral_end_stone": {
+    "textures": {
+      "side": "ct:cobbled_umbral_end_stone",
+      "up": "ct:cobbled_umbral_end_stone",
+      "down": "ct:cobbled_umbral_end_stone"
+    },
+    "sound": "stone"
+  },
+  "ct:gilded_end_stone": {
+    "textures": {
+      "side": "ct:gilded_end_stone",
+      "up": "ct:gilded_end_stone",
+      "down": "ct:gilded_end_stone"
+    },
+    "sound": "stone"
+  },
+  "ct:snowy_grass": {
+    "sound": "grass"
+  },
+  "ct:gilded_end_grass_block": {
+    "sound": "grass",
+    "textures": {
+      "side": "ct:gilded_end_grass_block_side",
+      "up": "ct:gilded_end_grass_block_top",
+      "down": "ct:gilded_end_stone"
+    }
+  },
+  "ct:endergloom_grass_block": {
+    "sound": "grass",
+    "textures": {
+      "side": "ct:endergloom_grass_block_side",
+      "up": "ct:endergloom_grass_block_top",
+      "down": "end_stone"
+    }
+  },
+  "ct:umbral_soil": {
+    "sound": "soul_soil",
+    "textures": {
+      "side": "ct:umbral_soil_side",
+      "up": "ct:umbral_soil_top",
+      "down": "ct:umbral_end_stone"
+    }
+  },
+  "ct:dry_grass": {
+    "sound": "grass",
+    "brightness_gamma": 0
+  },
+  "ct:lavender": {
+    "sound": "grass"
+  },
+  "ct:dry_tall_grass": {
+    "sound": "grass"
+  },
+  "ct:jungle_carpet": {
+    "sound": "moss_block"
+  },
+  "ct:jungle_roots": {
+    "sound": "grass",
+    "textures": {
+      "side": "ct:jungle_roots",
+      "up": "ct:jungle_roots",
+      "down": "ct:jungle_roots"
+    }
+  },
+  "ct:shells": {
+    "sound": "stone"
+  },
+  "ct:end_mud": {
+    "textures": {
+      "side": "ct:end_mud",
+      "up": "ct:end_mud",
+      "down": "ct:end_mud"
+    },
+    "sound": "mud"
+  }
+}

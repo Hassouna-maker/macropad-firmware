@@ -1,0 +1,13 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:scatter_feature": {
+    "description": {
+      "identifier": "ct:terrain_elevation/gilded_end_cliff_level_1_top_3"
+    },
+    "places_feature": "ct:terrain_elevation/place_gilded_end_cliff_top_2",
+    "iterations": "((t.top_layers_enabled == 1 && t.elev_height >= 1 && (t.elev_height - 1) == 2) ? 1 : 0)",
+    "x": 0,
+    "y": "t.elev_offset + 0",
+    "z": 0
+  }
+}
