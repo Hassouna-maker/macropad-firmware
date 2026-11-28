@@ -399,5 +399,14 @@
   },
   "ct:red_sand_layer": {
     "sound": "sand"
+  },
+  "ct:gravel_layer": {
+    "sound": "gravel"
+  },
+  "ct:stone_layer": {
+    "sound": "stone"
+  },
+  "ct:mud_layer": {
+    "sound": "mud"
   }
 }

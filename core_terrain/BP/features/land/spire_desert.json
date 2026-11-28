@@ -1,0 +1,18 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:weighted_random_feature": {
+    "description": {
+      "identifier": "ct:land/spire_desert"
+    },
+    "features": [
+      [
+        "ct:land/spire_desert_1",
+        2
+      ],
+      [
+        "ct:land/spire_desert_2",
+        1
+      ]
+    ]
+  }
+}

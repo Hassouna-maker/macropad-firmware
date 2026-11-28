@@ -21,8 +21,7 @@
       "minecraft:azure_bluet",
       "minecraft:oxeye_daisy",
       "minecraft:cornflower",
-      "minecraft:leaf_litter",
-      "ct:leaf_litter"
+      "minecraft:leaf_litter"
     ],
     "may_attach_to": {
       "bottom": [

@@ -1,0 +1,20 @@
+{
+  "format_version": "1.21.40",
+  "minecraft:single_block_feature": {
+    "description": {
+      "identifier": "ct:land/spring_water"
+    },
+    "places_block": "minecraft:water",
+    "enforce_placement_rules": false,
+    "enforce_survivability_rules": false,
+    "may_replace": [
+      "minecraft:stone",
+      "minecraft:dirt",
+      "minecraft:grass_block",
+      "minecraft:gravel",
+      "minecraft:andesite",
+      "minecraft:snow",
+      "minecraft:coarse_dirt"
+    ]
+  }
+}

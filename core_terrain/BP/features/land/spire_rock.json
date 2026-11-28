@@ -1,0 +1,18 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:weighted_random_feature": {
+    "description": {
+      "identifier": "ct:land/spire_rock"
+    },
+    "features": [
+      [
+        "ct:land/spire_rock_1",
+        2
+      ],
+      [
+        "ct:land/spire_rock_2",
+        1
+      ]
+    ]
+  }
+}

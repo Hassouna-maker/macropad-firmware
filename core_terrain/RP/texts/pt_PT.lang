@@ -1,4 +1,4 @@
-pack.name=Core Terrain v1.10.0
+pack.name=Core Terrain v1.11.0
 pack.description=Terrain, biomes and trees extracted from Core Craft
 tile.ct:smooth_end_stone.name=Pedra de extremidade lisa
 item.ct:smooth_end_stone=Pedra de extremidade lisa
@@ -361,3 +361,12 @@ item.ct:sand_layer=Sand Layer
 
 tile.ct:red_sand_layer.name=Red Sand Layer
 item.ct:red_sand_layer=Red Sand Layer
+
+tile.ct:gravel_layer.name=Gravel Layer
+item.ct:gravel_layer=Gravel Layer
+
+tile.ct:stone_layer.name=Stone Layer
+item.ct:stone_layer=Stone Layer
+
+tile.ct:mud_layer.name=Mud Layer
+item.ct:mud_layer=Mud Layer

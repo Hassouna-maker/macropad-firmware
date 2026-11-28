@@ -1,0 +1,40 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:feature_rules": {
+    "description": {
+      "identifier": "ct:land_swampmud_band2",
+      "places_feature": "ct:land/mud_h2"
+    },
+    "conditions": {
+      "placement_pass": "first_pass",
+      "minecraft:biome_filter": {
+        "any_of": [
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "swamp"
+          }
+        ]
+      }
+    },
+    "distribution": {
+      "iterations": 256,
+      "scatter_chance": 100.0,
+      "x": {
+        "distribution": "fixed_grid",
+        "extent": [
+          0,
+          15
+        ]
+      },
+      "y": "(((math.sin(v.worldx*3.3 + 10) + math.sin(v.worldz*4.1) + math.sin((v.worldx - v.worldz)*2.2)) / 3) > 0.41 && ((math.sin(v.worldx*3.3 + 10) + math.sin(v.worldz*4.1) + math.sin((v.worldx - v.worldz)*2.2)) / 3) <= 0.54) ? (q.heightmap(v.worldx, v.worldz)) : -100",
+      "z": {
+        "distribution": "fixed_grid",
+        "extent": [
+          0,
+          15
+        ]
+      }
+    }
+  }
+}

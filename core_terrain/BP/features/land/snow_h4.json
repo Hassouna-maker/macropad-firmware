@@ -13,7 +13,17 @@
     "enforce_placement_rules": false,
     "enforce_survivability_rules": false,
     "may_replace": [
-      "minecraft:air"
+      "minecraft:air",
+      "minecraft:short_grass",
+      "minecraft:fern",
+      "minecraft:dandelion",
+      "minecraft:poppy",
+      "minecraft:azure_bluet",
+      "minecraft:oxeye_daisy",
+      "minecraft:cornflower",
+      "minecraft:leaf_litter",
+      "minecraft:dead_bush",
+      "minecraft:snow_layer"
     ],
     "may_attach_to": {
       "bottom": [

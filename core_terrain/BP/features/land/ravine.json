@@ -1,0 +1,28 @@
+{
+  "format_version": "1.13.0",
+  "minecraft:cave_carver_feature": {
+    "description": {
+      "identifier": "ct:land/ravine"
+    },
+    "fill_with": "minecraft:air",
+    "width_modifier": 2.0,
+    "skip_carve_chance": 0,
+    "height_limit": 30,
+    "y_scale": [
+      3.0,
+      5.0
+    ],
+    "horizontal_radius_multiplier": [
+      0.35,
+      0.7
+    ],
+    "vertical_radius_multiplier": [
+      4.0,
+      7.0
+    ],
+    "floor_level": [
+      -0.5,
+      0.0
+    ]
+  }
+}

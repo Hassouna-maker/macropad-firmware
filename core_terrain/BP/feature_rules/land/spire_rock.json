@@ -1,0 +1,45 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:feature_rules": {
+    "description": {
+      "identifier": "ct:land_spire_rock",
+      "places_feature": "ct:land/spire_rock"
+    },
+    "conditions": {
+      "placement_pass": "first_pass",
+      "minecraft:biome_filter": {
+        "any_of": [
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "extreme_hills"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "mountain"
+          }
+        ]
+      }
+    },
+    "distribution": {
+      "iterations": 3,
+      "scatter_chance": 8.0,
+      "x": {
+        "distribution": "uniform",
+        "extent": [
+          -12,
+          12
+        ]
+      },
+      "y": "query.heightmap(v.originx, v.originz)",
+      "z": {
+        "distribution": "uniform",
+        "extent": [
+          -12,
+          12
+        ]
+      }
+    }
+  }
+}

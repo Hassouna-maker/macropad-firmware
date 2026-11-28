@@ -1,0 +1,50 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:feature_rules": {
+    "description": {
+      "identifier": "ct:land_spring",
+      "places_feature": "ct:land/spring_water"
+    },
+    "conditions": {
+      "placement_pass": "after_surface_pass",
+      "minecraft:biome_filter": {
+        "any_of": [
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "extreme_hills"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "mountain"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "hills"
+          }
+        ]
+      }
+    },
+    "distribution": {
+      "iterations": 2,
+      "scatter_chance": 14.0,
+      "x": {
+        "distribution": "uniform",
+        "extent": [
+          0,
+          15
+        ]
+      },
+      "y": "(q.heightmap(v.worldx, v.worldz) > 80) ? (q.heightmap(v.worldx, v.worldz) - 1) : -100",
+      "z": {
+        "distribution": "uniform",
+        "extent": [
+          0,
+          15
+        ]
+      }
+    }
+  }
+}

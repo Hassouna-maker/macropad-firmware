@@ -1,0 +1,50 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:feature_rules": {
+    "description": {
+      "identifier": "ct:land_slope_rock_a0",
+      "places_feature": "ct:land/rock_step_5"
+    },
+    "conditions": {
+      "placement_pass": "first_pass",
+      "minecraft:biome_filter": {
+        "any_of": [
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "extreme_hills"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "mountain"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "hills"
+          }
+        ]
+      }
+    },
+    "distribution": {
+      "iterations": 256,
+      "scatter_chance": 100.0,
+      "x": {
+        "distribution": "fixed_grid",
+        "extent": [
+          0,
+          15
+        ]
+      },
+      "y": "(((math.max(math.max(q.heightmap(v.worldx + (1), v.worldz + (0)), q.heightmap(v.worldx + (-1), v.worldz + (0))), math.max(q.heightmap(v.worldx + (0), v.worldz + (1)), q.heightmap(v.worldx + (0), v.worldz + (-1)))) - q.heightmap(v.worldx, v.worldz)) == 1) && (((math.sin(v.worldx*91.7 + v.worldz*37.3) + math.sin(v.worldx*23.1 - v.worldz*58.9)) / 2) > 0.5)) ? (q.heightmap(v.worldx, v.worldz)) : -100",
+      "z": {
+        "distribution": "fixed_grid",
+        "extent": [
+          0,
+          15
+        ]
+      }
+    }
+  }
+}

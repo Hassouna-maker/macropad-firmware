@@ -1,0 +1,66 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:feature_rules": {
+    "description": {
+      "identifier": "ct:land_ravine",
+      "places_feature": "ct:land/ravine"
+    },
+    "conditions": {
+      "placement_pass": "after_surface_pass",
+      "minecraft:biome_filter": {
+        "any_of": [
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "extreme_hills"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "mountain"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "hills"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "mesa"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "desert"
+          }
+        ]
+      }
+    },
+    "distribution": {
+      "iterations": 1,
+      "scatter_chance": 4.0,
+      "x": {
+        "distribution": "uniform",
+        "extent": [
+          0,
+          15
+        ]
+      },
+      "y": {
+        "distribution": "uniform",
+        "extent": [
+          40,
+          75
+        ]
+      },
+      "z": {
+        "distribution": "uniform",
+        "extent": [
+          0,
+          15
+        ]
+      }
+    }
+  }
+}

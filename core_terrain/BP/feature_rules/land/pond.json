@@ -1,0 +1,65 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:feature_rules": {
+    "description": {
+      "identifier": "ct:land_pond",
+      "places_feature": "ct:land/pond_water"
+    },
+    "conditions": {
+      "placement_pass": "after_surface_pass",
+      "minecraft:biome_filter": {
+        "any_of": [
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "forest"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "plains"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "taiga"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "swamp"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "meadow"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "hills"
+          }
+        ]
+      }
+    },
+    "distribution": {
+      "iterations": 256,
+      "scatter_chance": 100.0,
+      "x": {
+        "distribution": "fixed_grid",
+        "extent": [
+          0,
+          15
+        ]
+      },
+      "y": "((((math.sin(v.worldx*5.1 + 33) + math.sin(v.worldz*6.3 + 71) + math.sin((v.worldx + v.worldz)*3.7)) / 3) > 0.8) && ((math.max(math.max(q.heightmap(v.worldx + (1), v.worldz + (0)), q.heightmap(v.worldx + (-1), v.worldz + (0))), math.max(q.heightmap(v.worldx + (0), v.worldz + (1)), q.heightmap(v.worldx + (0), v.worldz + (-1)))) - q.heightmap(v.worldx, v.worldz)) == 0 && math.min(math.min(q.heightmap(v.worldx + (1), v.worldz + (0)), q.heightmap(v.worldx + (-1), v.worldz + (0))), math.min(q.heightmap(v.worldx + (0), v.worldz + (1)), q.heightmap(v.worldx + (0), v.worldz + (-1)))) == q.heightmap(v.worldx, v.worldz))) ? (q.heightmap(v.worldx, v.worldz) - 1) : -100",
+      "z": {
+        "distribution": "fixed_grid",
+        "extent": [
+          0,
+          15
+        ]
+      }
+    }
+  }
+}

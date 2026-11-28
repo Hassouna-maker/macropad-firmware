@@ -3,10 +3,10 @@
   "header": {
     "name": "pack.name",
     "description": "pack.description",
-    "uuid": "a152fd5f-eb78-45c0-b0f7-525ab1670605",
+    "uuid": "4eb03905-b915-4a72-bf6e-7c6ee9303886",
     "version": [
       1,
-      10,
+      11,
       0
     ],
     "min_engine_version": [
@@ -19,20 +19,20 @@
   "modules": [
     {
       "type": "resources",
-      "uuid": "7c2a8f36-1605-4cb1-9b3e-a74c3a5da46a",
+      "uuid": "7eee2e56-e144-44c6-a7f1-6b5e0f58c7f3",
       "version": [
         1,
-        10,
+        11,
         0
       ]
     }
   ],
   "dependencies": [
     {
-      "uuid": "2ad883be-2e04-4df1-b7dc-448f17e92c1b",
+      "uuid": "8c70cbc2-b9a6-45c3-a59c-9fc8cde53d35",
       "version": [
         1,
-        10,
+        11,
         0
       ]
     }
