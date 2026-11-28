@@ -1,0 +1,7 @@
+{
+  "format_version": "1.21.30",
+  "minecraft:texture_set": {
+    "color": "ri__1bb6_d6fb",
+    "metalness_emissive_roughness_subsurface": "ri__1bb6_d6fb_mers"
+  }
+}

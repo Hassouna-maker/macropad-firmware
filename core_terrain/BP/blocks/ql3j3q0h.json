@@ -1,0 +1,143 @@
+{
+  "format_version": "1.26.0",
+  "minecraft:block": {
+    "description": {
+      "identifier": "ct:umbral_end_liana",
+      "menu_category": {
+        "category": "none"
+      },
+      "states": {
+        "ct:connect": [
+          "end",
+          "inner"
+        ]
+      }
+    },
+    "components": {
+      "tag:plant": {},
+      "tag:vine": {},
+      "tag:nonsolid": {},
+      "minecraft:destructible_by_mining": {
+        "seconds_to_destroy": 0.1
+      },
+      "minecraft:destructible_by_explosion": {
+        "explosion_resistance": 0
+      },
+      "minecraft:geometry": "geometry.ct.cross",
+      "minecraft:material_instances": {
+        "*": {
+          "texture": "ct:umbral_end_liana_end",
+          "render_method": "alpha_test",
+          "ambient_occlusion": false,
+          "face_dimming": false
+        }
+      },
+      "minecraft:collision_box": false,
+      "minecraft:selection_box": {
+        "origin": [
+          -5,
+          6,
+          -5
+        ],
+        "size": [
+          10,
+          10,
+          10
+        ]
+      },
+      "minecraft:light_dampening": 0,
+      "minecraft:map_color": "#e2bc55",
+      "minecraft:liquid_detection": {
+        "detection_rules": [
+          {
+            "can_contain_liquid": false,
+            "liquid_type": "water",
+            "on_liquid_touches": "broken"
+          }
+        ]
+      },
+      "minecraft:support": {
+        "shape": "stair"
+      },
+      "minecraft:connection_rule": {
+        "accepts_connections_from": "none"
+      },
+      "minecraft:loot": "loot_tables/cc/end/umbral_end_liana.loot.json"
+    },
+    "permutations": [
+      {
+        "condition": "q.block_state('ct:connect') == 'inner'",
+        "components": {
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:umbral_end_liana_inner",
+              "render_method": "alpha_test",
+              "ambient_occlusion": false,
+              "face_dimming": false
+            }
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -6,
+              0,
+              -6
+            ],
+            "size": [
+              12,
+              16,
+              12
+            ]
+          },
+          "minecraft:placement_filter": {
+            "conditions": [
+              {
+                "allowed_faces": [
+                  "down"
+                ],
+                "block_filter": [
+                  {
+                    "name": "ct:umbral_end_liana"
+                  },
+                  {
+                    "name": "ct:umbral_end_spire_log"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('ct:connect') == 'end'",
+        "components": {
+          "tag:vine_tip": {},
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:umbral_end_liana_end",
+              "render_method": "alpha_test",
+              "ambient_occlusion": false,
+              "face_dimming": false
+            }
+          },
+          "minecraft:placement_filter": {
+            "conditions": [
+              {
+                "allowed_faces": [
+                  "down"
+                ],
+                "block_filter": [
+                  {
+                    "name": "ct:umbral_end_liana"
+                  },
+                  {
+                    "name": "ct:umbral_end_spire_log"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

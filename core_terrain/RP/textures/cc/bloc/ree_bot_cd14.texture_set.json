@@ -1,0 +1,8 @@
+{
+  "format_version": "1.21.30",
+  "minecraft:texture_set": {
+    "color": "ree_bot_cd14",
+    "heightmap": "ree_bot_cd14_heightmap",
+    "metalness_emissive_roughness_subsurface": "ree_bot_cd14_mers"
+  }
+}

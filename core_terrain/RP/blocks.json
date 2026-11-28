@@ -27,7 +27,21 @@
     },
     "sound": "stone"
   },
+  "ct:endergloom_mushroom_stem": {
+    "textures": {
+      "side": "ct:endergloom_mushroom_stem",
+      "up": "ct:endergloom_mushroom_stem",
+      "down": "ct:endergloom_mushroom_stem"
+    },
+    "sound": "fungus"
+  },
   "ct:snowy_grass": {
+    "sound": "grass"
+  },
+  "ct:umbral_end_grass": {
+    "sound": "grass"
+  },
+  "ct:umbral_end_short_grass": {
     "sound": "grass"
   },
   "ct:endergloom_grass": {
@@ -36,8 +50,70 @@
   "ct:endergloom_short_grass": {
     "sound": "moss_block"
   },
+  "ct:gilded_end_grass": {
+    "sound": "moss_block"
+  },
+  "ct:gilded_end_short_grass": {
+    "sound": "moss_block"
+  },
+  "ct:umbral_end_dead_bush": {
+    "sound": "grass"
+  },
+  "ct:void_shroom": {
+    "sound": "moss_block"
+  },
+  "ct:tall_void_shroom": {
+    "sound": "moss_block"
+  },
+  "ct:hollow_acacia_log": {
+    "sound": "wood"
+  },
+  "ct:hollow_birch_log": {
+    "sound": "wood"
+  },
+  "ct:hollow_jungle_log": {
+    "sound": "wood"
+  },
+  "ct:hollow_oak_log": {
+    "sound": "wood"
+  },
+  "ct:hollow_spruce_log": {
+    "sound": "wood"
+  },
+  "ct:hollow_pale_oak_log": {
+    "sound": "wood"
+  },
+  "ct:hollow_crimson_log": {
+    "sound": "nether_wood"
+  },
+  "ct:hollow_warped_log": {
+    "sound": "nether_wood"
+  },
+  "ct:hollow_end_spire_log": {
+    "sound": "nether_wood"
+  },
+  "ct:hollow_umbral_end_spire_log": {
+    "sound": "nether_wood"
+  },
+  "ct:ruby_ore": {
+    "textures": "ct:ruby_ore",
+    "sound": "stone"
+  },
+  "ct:voidshard_ore": {
+    "sound": "stone"
+  },
+  "ct:deepslate_ruby_ore": {
+    "textures": "ct:deepslate_ruby_ore",
+    "sound": "deepslate"
+  },
   "ct:palm_log": {
     "sound": "wood"
+  },
+  "ct:end_spire_log": {
+    "sound": "nether_wood"
+  },
+  "ct:umbral_end_spire_log": {
+    "sound": "nether_wood"
   },
   "ct:palm_sapling": {
     "sound": "grass"
@@ -65,6 +141,14 @@
       "down": "end_stone"
     }
   },
+  "ct:endergloom_light": {
+    "sound": "froglight",
+    "textures": {
+      "side": "ct:endergloom_light",
+      "up": "ct:endergloom_light",
+      "down": "ct:endergloom_light"
+    }
+  },
   "ct:umbral_soil": {
     "sound": "soul_soil",
     "textures": {
@@ -76,12 +160,68 @@
   "ct:gilded_end_moss": {
     "sound": "moss_block"
   },
+  "ct:endergloom_dripshroom": {
+    "sound": "slime"
+  },
+  "ct:endergloom_mushroom_block": {
+    "textures": {
+      "side": "ct:endergloom_mushroom_block",
+      "up": "ct:endergloom_mushroom_block",
+      "down": "ct:endergloom_mushroom_block_inside"
+    },
+    "sound": "fungus"
+  },
+  "ct:gilded_end_hanging_moss": {
+    "sound": "moss_block"
+  },
+  "ct:gilded_end_vines": {
+    "sound": "moss_block"
+  },
+  "ct:mycelium_grass": {
+    "sound": "grass"
+  },
+  "ct:desert_grass": {
+    "sound": "moss_block"
+  },
+  "ct:liana": {
+    "sound": "moss_block"
+  },
+  "ct:umbral_end_liana": {
+    "sound": "moss_block"
+  },
+  "ct:desert_tall_grass": {
+    "sound": "moss_block"
+  },
+  "ct:pale_grass": {
+    "sound": "moss_block"
+  },
+  "ct:tall_pale_mushrooms": {
+    "sound": "moss_block"
+  },
+  "ct:jungle_grass": {
+    "sound": "moss_block"
+  },
   "ct:dry_grass": {
     "sound": "grass",
     "brightness_gamma": 0
   },
+  "ct:swamp_fern": {
+    "sound": "grass"
+  },
+  "ct:knotweed": {
+    "sound": "grass"
+  },
   "ct:lavender": {
     "sound": "grass"
+  },
+  "ct:wall_plant": {
+    "sound": "moss_block"
+  },
+  "ct:wall_plant_yellow": {
+    "sound": "moss_block"
+  },
+  "ct:wall_mushrooms": {
+    "sound": "fungus"
   },
   "ct:end_twister": {
     "sound": "weeping_vines"
@@ -92,14 +232,56 @@
   "ct:icicles": {
     "sound": "amethyst_cluster"
   },
+  "ct:tall_red_mushrooms": {
+    "sound": "fungus"
+  },
+  "ct:tall_brown_mushrooms": {
+    "sound": "fungus"
+  },
   "ct:dry_tall_grass": {
+    "sound": "grass"
+  },
+  "ct:clover": {
+    "sound": "moss_block"
+  },
+  "ct:daisy_carpet": {
+    "sound": "moss_block"
+  },
+  "ct:blue_jungle_plant": {
+    "sound": "grass"
+  },
+  "ct:yellow_jungle_plant": {
     "sound": "grass"
   },
   "ct:jungle_carpet": {
     "sound": "moss_block"
   },
+  "ct:small_lily_pads": {
+    "sound": "moss_block"
+  },
+  "ct:duckweed": {
+    "sound": "moss_block"
+  },
+  "ct:lily_pad_flower": {
+    "sound": "moss_block"
+  },
+  "ct:floating_flower": {
+    "sound": "moss_block"
+  },
   "ct:dry_bush": {
     "sound": "moss_block"
+  },
+  "ct:forest_bush": {
+    "sound": "moss_block"
+  },
+  "ct:wide_fern": {
+    "sound": "grass"
+  },
+  "ct:reed": {
+    "sound": "grass"
+  },
+  "ct:swamp_grass": {
+    "sound": "grass"
   },
   "ct:jungle_roots": {
     "sound": "grass",
@@ -109,8 +291,58 @@
       "down": "ct:jungle_roots"
     }
   },
+  "ct:meerkat_burrow": {
+    "sound": "packed_mud",
+    "textures": {
+      "side": "packed_mud",
+      "up": "ct:meerkat_burrow",
+      "down": "packed_mud"
+    }
+  },
+  "ct:banana_seeds": {
+    "sound": "grass"
+  },
+  "ct:blue_berries": {
+    "sound": "sweet_berry_bush"
+  },
+  "ct:pinecone": {
+    "sound": "bamboo_wood"
+  },
+  "ct:rice": {
+    "sound": "grass"
+  },
+  "ct:strawberry": {
+    "sound": "sweet_berry_bush"
+  },
+  "ct:hanging_swamp_leaves": {
+    "sound": "moss_block"
+  },
+  "ct:hanging_oak_leaves": {
+    "sound": "moss_block"
+  },
   "ct:hanging_palm_leaves": {
     "sound": "moss_block"
+  },
+  "ct:hanging_birch_leaves": {
+    "sound": "moss_block"
+  },
+  "ct:taiga_red_plant": {
+    "sound": "moss_block"
+  },
+  "ct:taiga_orange_plant": {
+    "sound": "moss_block"
+  },
+  "ct:big_red_mushroom": {
+    "sound": "fungus"
+  },
+  "ct:big_brown_mushroom": {
+    "sound": "fungus"
+  },
+  "ct:big_jungle_flower": {
+    "sound": "moss_block"
+  },
+  "ct:apple": {
+    "sound": "fungus"
   },
   "ct:pebbles": {
     "sound": "stone"
@@ -127,6 +359,12 @@
   "ct:coconut_spawner": {
     "sound": "wood"
   },
+  "ct:small_cactus": {
+    "sound": "cloth"
+  },
+  "ct:barnacles": {
+    "sound": "turtle_egg"
+  },
   "ct:end_mud": {
     "textures": {
       "side": "ct:end_mud",
@@ -134,5 +372,14 @@
       "down": "ct:end_mud"
     },
     "sound": "mud"
+  },
+  "ct:rift_essence_block": {
+    "sound": "shroomlight"
+  },
+  "ct:thin_birch_log": {
+    "sound": "wood"
+  },
+  "ct:thin_oak_log": {
+    "sound": "wood"
   }
 }

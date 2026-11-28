@@ -1,0 +1,48 @@
+{
+  "format_version": "1.26.0",
+  "minecraft:block": {
+    "description": {
+      "identifier": "ct:rift_essence_end_stone",
+      "menu_category": {
+        "category": "nature"
+      }
+    },
+    "components": {
+      "tag:solid": {},
+      "minecraft:collision_box": true,
+      "minecraft:selection_box": true,
+      "minecraft:geometry": "geometry.ct.overlay_block",
+      "minecraft:material_instances": {
+        "*": {
+          "texture": "end_stone",
+          "render_method": "alpha_test"
+        },
+        "overlay": {
+          "texture": "ct:rift_essence_end_stone",
+          "render_method": "alpha_test",
+          "face_dimming": false,
+          "ambient_occlusion": false,
+          "isotropic": true
+        }
+      },
+      "minecraft:map_color": "#72146F",
+      "minecraft:destructible_by_explosion": {
+        "explosion_resistance": 0.5
+      },
+      "minecraft:destructible_by_mining": {
+        "seconds_to_destroy": 2.0
+      },
+      "tag:minecraft:is_pickaxe_item_destructible": {},
+      "minecraft:light_dampening": 0,
+      "minecraft:light_emission": 2,
+      "minecraft:liquid_detection": {
+        "detection_rules": [
+          {
+            "liquid_type": "water",
+            "on_liquid_touches": "no_reaction"
+          }
+        ]
+      }
+    }
+  }
+}

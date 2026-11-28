@@ -1,0 +1,58 @@
+{
+  "format_version": "1.26.0",
+  "minecraft:block": {
+    "description": {
+      "identifier": "ct:rift_essence_block",
+      "menu_category": {
+        "category": "nature"
+      },
+      "states": {
+        "ct:player_placed": [true, false]
+      }
+    },
+    "components": {
+      "tag:solid": {},
+      "minecraft:collision_box": true,
+      "minecraft:selection_box": true,
+      "minecraft:geometry": "minecraft:geometry.full_block",
+      "minecraft:material_instances": {
+        "*": {
+          "texture": "ct:rift_essence",
+          "face_dimming": false,
+          "ambient_occlusion": false
+        },
+        "up": {
+          "texture": "ct:rift_essence",
+          "face_dimming": false,
+          "ambient_occlusion": false,
+          "isotropic": true
+        },
+        "down": {
+          "texture": "ct:rift_essence",
+          "face_dimming": false,
+          "ambient_occlusion": false,
+          "isotropic": true
+        }
+      },
+      "minecraft:map_color": "#72146F",
+      "minecraft:destructible_by_explosion": {
+        "explosion_resistance": 0.5
+      },
+      "minecraft:destructible_by_mining": {
+        "seconds_to_destroy": 3.0
+      },
+      "tag:minecraft:is_pickaxe_item_destructible": {},
+      "minecraft:loot": "loot_tables/cc/end/rift_essence.loot.json",
+      "minecraft:light_dampening": 0,
+      "minecraft:light_emission": 9,
+      "minecraft:liquid_detection": {
+        "detection_rules": [
+          {
+            "liquid_type": "water",
+            "on_liquid_touches": "no_reaction"
+          }
+        ]
+      }
+    }
+  }
+}

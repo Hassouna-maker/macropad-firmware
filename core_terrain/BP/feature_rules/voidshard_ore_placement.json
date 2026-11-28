@@ -1,0 +1,36 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:feature_rules": {
+    "description": {
+      "identifier": "ct:voidshard_ore_placement",
+      "places_feature": "ct:voidshard_ore_feature"
+    },
+    "conditions": {
+      "placement_pass": "underground_pass",
+      "minecraft:biome_filter": [
+        {
+          "test": "has_biome_tag",
+          "operator": "==",
+          "value": "the_end"
+        }
+      ]
+    },
+
+    "distribution": {
+      "iterations": 10,
+      "scatter_chance": 10,
+      "x": {
+        "distribution": "gaussian",
+        "extent": [-8, 8]
+      },
+      "y": {
+        "distribution": "gaussian",
+        "extent": [0, 87]
+      },
+      "z": {
+        "distribution": "gaussian",
+        "extent": [-8, 8]
+      }
+    }
+  }
+}

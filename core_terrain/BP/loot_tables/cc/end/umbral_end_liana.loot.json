@@ -1,0 +1,18 @@
+{
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "empty",
+          "weight": 5
+        },
+        {
+          "type": "item",
+          "name": "ct:umbral_end_spire_sapling",
+          "weight": 1
+        }
+      ]
+    }
+  ]
+}

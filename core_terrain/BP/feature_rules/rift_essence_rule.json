@@ -1,0 +1,40 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:feature_rules": {
+    "description": {
+      "identifier": "ct:rift_essence_rule",
+      "places_feature": "ct:rift_essence_sequence"
+    },
+    "conditions": {
+      "placement_pass": "surface_pass",
+      "minecraft:biome_filter": {
+        "any_of": [
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "the_end"
+          }
+        ]
+      }
+    },
+    "distribution": {
+      "iterations": 6,
+      "scatter_chance": 30.0,
+      "x": {
+        "distribution": "uniform",
+        "extent": [
+          -15,
+          15
+        ]
+      },
+      "y": "math.clamp(query.heightmap(v.originx, v.originz), 50, 57)",
+      "z": {
+        "distribution": "uniform",
+        "extent": [
+          -15,
+          15
+        ]
+      }
+    }
+  }
+}

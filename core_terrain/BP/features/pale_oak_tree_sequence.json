@@ -1,0 +1,12 @@
+{
+  "format_version": "1.13.0",
+  "minecraft:sequence_feature": {
+    "description": {
+      "identifier": "ct:pale_oak_tree_sequence"
+    },
+    "features": [
+      "ct:pale_oak_tree_check_block",
+      "ct:pale_oak_tree_weighted"
+    ]
+  }
+}

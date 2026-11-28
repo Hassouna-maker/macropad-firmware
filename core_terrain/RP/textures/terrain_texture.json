@@ -4,6 +4,30 @@
   "padding": 8,
   "num_mip_levels": 4,
   "texture_data": {
+    "ct:endergloom_mushroom_block": {
+      "textures": "textures/cc/bloc/en__a05f_7251"
+    },
+    "ct:endergloom_mushroom_block_inside": {
+      "textures": "textures/cc/bloc/en__e543_675f"
+    },
+    "ct:endergloom_light": {
+      "textures": "textures/cc/bloc/end_lig_098c"
+    },
+    "ct:meerkat_burrow": {
+      "textures": "textures/cc/bloc/mee_bur_7178"
+    },
+    "ct:small_lily_pads_1": {
+      "textures": "textures/cc/bloc/sm__82b1_935d"
+    },
+    "ct:small_lily_pads_2": {
+      "textures": "textures/cc/bloc/sm__7dd6_1cbc"
+    },
+    "ct:small_lily_pads_3": {
+      "textures": "textures/cc/bloc/sm__7daa_6cd3"
+    },
+    "ct:small_lily_pads_4": {
+      "textures": "textures/cc/bloc/sm__ef39_32f0"
+    },
     "ct:shells_1": {
       "textures": "textures/cc/bloc/she_1_a97c"
     },
@@ -19,14 +43,35 @@
     "ct:pebbles": {
       "textures": "textures/cc/bloc/pebb_063f"
     },
+    "ct:barnacles": {
+      "textures": "textures/cc/bloc/barn_0282"
+    },
     "ct:end_stone_pebbles": {
       "textures": "textures/cc/bloc/en__365d_56b1"
+    },
+    "ct:duckweed": {
+      "textures": "textures/cc/bloc/duck_29c4"
     },
     "ct:lavender": {
       "textures": "textures/cc/bloc/lave_a393"
     },
     "ct:lavender_stem": {
       "textures": "textures/cc/bloc/lav_ste_ca19"
+    },
+    "ct:daisy_carpet_1": {
+      "textures": "textures/cc/bloc/da__1354_3e12"
+    },
+    "ct:daisy_carpet_2": {
+      "textures": "textures/cc/bloc/da__5509_2c97"
+    },
+    "ct:daisy_carpet_3": {
+      "textures": "textures/cc/bloc/da__7d14_7a22"
+    },
+    "ct:daisy_carpet_4": {
+      "textures": "textures/cc/bloc/da__71ce_1b6b"
+    },
+    "ct:mycelium_grass": {
+      "textures": "textures/cc/bloc/myc_gra_8193"
     },
     "ct:dry_grass": {
       "textures": "textures/cc/bloc/dry_gra_8c0b"
@@ -40,6 +85,27 @@
     "ct:dry_tall_grass_stem": {
       "textures": "textures/cc/bloc/dr__6191_a8a6"
     },
+    "ct:wall_plant": {
+      "textures": "textures/cc/bloc/wal_pla_6288"
+    },
+    "ct:wall_plant_yellow": {
+      "textures": "textures/cc/bloc/wa__14ac_be5f"
+    },
+    "ct:wall_plant_yellow_tint": {
+      "textures": "textures/cc/bloc/wa__ea52_b670"
+    },
+    "ct:reed_bottom": {
+      "textures": "textures/cc/bloc/ree_bot_cd14"
+    },
+    "ct:reed_top": {
+      "textures": "textures/cc/bloc/ree_top_e302"
+    },
+    "ct:swamp_grass": {
+      "textures": "textures/cc/bloc/swa_gra_9d0d"
+    },
+    "ct:swamp_fern": {
+      "textures": "textures/cc/bloc/swa_fer_6469"
+    },
     "ct:jungle_carpet_side": {
       "textures": "textures/cc/bloc/ju__b993_ea9d"
     },
@@ -51,6 +117,33 @@
     },
     "ct:icicles": {
       "textures": "textures/cc/bloc/icic_9859"
+    },
+    "ct:liana_inner": {
+      "textures": "textures/cc/bloc/lia_inn_3521"
+    },
+    "ct:vine_tip": {
+      "textures": "textures/cc/bloc/lia_end_ad40"
+    },
+    "ct:blue_jungle_plant": {
+      "textures": "textures/cc/bloc/bl__5732_71d6"
+    },
+    "ct:blue_jungle_plant_stem": {
+      "textures": "textures/cc/bloc/bl__b303_1fb5"
+    },
+    "ct:yellow_jungle_plant": {
+      "textures": "textures/cc/bloc/ye__a945_8b35"
+    },
+    "ct:yellow_jungle_plant_stem": {
+      "textures": "textures/cc/bloc/ye__15ed_4d82"
+    },
+    "ct:big_jungle_flower": {
+      "textures": "textures/cc/bloc/bi__e74a_f05e"
+    },
+    "ct:big_jungle_flower_side": {
+      "textures": "textures/cc/bloc/bi__6405_5dac"
+    },
+    "ct:big_jungle_flower_top": {
+      "textures": "textures/cc/bloc/bi__3a59_3764"
     },
     "ct:coconut_1": {
       "textures": "textures/cc/bloc/coc_1_4a51"
@@ -64,11 +157,134 @@
     "ct:coconut_3_top": {
       "textures": "textures/cc/bloc/co__56e6_db25"
     },
+    "ct:big_red_mushroom": {
+      "textures": "textures/cc/bloc/bi__87b5_1ed4"
+    },
+    "ct:big_brown_mushroom": {
+      "textures": "textures/cc/bloc/bi__33b2_8474"
+    },
+    "ct:hollow_spruce_log": {
+      "textures": "textures/cc/bloc/ho__5b66_0f49"
+    },
+    "ct:birch_log_top": {
+      "textures": "textures/blocks/log_birch_top"
+    },
+    "ct:hollow_birch_log": {
+      "textures": "textures/cc/bloc/ho__b43d_da14"
+    },
+    "ct:oak_log_side": {
+      "textures": "textures/blocks/log_oak"
+    },
+    "ct:birch_log_side": {
+      "textures": "textures/blocks/log_birch"
+    },
+    "ct:oak_log_top": {
+      "textures": "textures/blocks/log_oak_top"
+    },
+    "ct:hollow_warped_log": {
+      "textures": "textures/cc/bloc/ho__74a4_6495"
+    },
+    "ct:hollow_crimson_log": {
+      "textures": "textures/cc/bloc/ho__4e5d_d480"
+    },
+    "ct:hollow_oak_log": {
+      "textures": "textures/cc/bloc/ho__4428_099a"
+    },
+    "ct:hollow_jungle_log": {
+      "textures": "textures/cc/bloc/ho__92f8_8864"
+    },
+    "ct:hollow_acacia_log": {
+      "textures": "textures/cc/bloc/ho__1913_7af5"
+    },
+    "ct:hollow_pale_oak_log": {
+      "textures": "textures/cc/bloc/ho__5daf_d700"
+    },
+    "ct:wall_mushrooms": {
+      "textures": "textures/cc/bloc/wal_mus_f119"
+    },
+    "ct:clover_1": {
+      "textures": "textures/cc/bloc/clo_1_3e6d"
+    },
+    "ct:clover_2": {
+      "textures": "textures/cc/bloc/clo_2_3ff7"
+    },
+    "ct:clover_3": {
+      "textures": "textures/cc/bloc/clo_3_1698"
+    },
+    "ct:clover_4": {
+      "textures": "textures/cc/bloc/clo_4_d86c"
+    },
+    "ct:clover_side": {
+      "textures": "textures/cc/bloc/clo_sid_caff"
+    },
+    "ct:daisy_carpet_side": {
+      "textures": "textures/cc/bloc/da__edb7_70eb"
+    },
+    "ct:taiga_plant_stem": {
+      "textures": "textures/cc/bloc/ta__3ac0_cdbe"
+    },
+    "ct:taiga_red_plant": {
+      "textures": "textures/cc/bloc/ta__9fa4_d0e6"
+    },
+    "ct:taiga_orange_plant": {
+      "textures": "textures/cc/bloc/ta__2c55_d990"
+    },
     "ct:dry_bush": {
       "textures": "textures/cc/bloc/dry_bus_ca3a"
     },
+    "ct:forest_bush_stem": {
+      "textures": "textures/cc/bloc/fo__b30d_380b"
+    },
+    "ct:forest_bush_tint": {
+      "textures": "textures/cc/bloc/fo__351e_26e3"
+    },
+    "ct:wide_fern": {
+      "textures": "textures/cc/bloc/wid_fer_c56f"
+    },
+    "ct:tall_brown_mushrooms": {
+      "textures": "textures/cc/bloc/ta__4a32_b1a2"
+    },
+    "ct:small_cactus": {
+      "textures": "textures/cc/bloc/sma_cac_5bf0"
+    },
+    "ct:desert_grass": {
+      "textures": "textures/cc/bloc/des_gra_a49d"
+    },
+    "ct:desert_tall_grass": {
+      "textures": "textures/cc/bloc/de__1e4d_424d"
+    },
+    "ct:tall_red_mushrooms": {
+      "textures": "textures/cc/bloc/ta__054b_30e8"
+    },
+    "ct:tall_pale_mushrooms": {
+      "textures": "textures/cc/bloc/ta__bd9b_f069"
+    },
+    "ct:pale_grass": {
+      "textures": "textures/cc/bloc/pal_gra_b59d"
+    },
+    "ct:jungle_grass": {
+      "textures": "textures/cc/bloc/jun_gra_eeca"
+    },
+    "ct:knotweed": {
+      "textures": "textures/cc/bloc/knot_8f81"
+    },
     "ct:jungle_roots": {
       "textures": "textures/cc/bloc/jun_roo_eee7"
+    },
+    "ct:lily_pad_flower_flower": {
+      "textures": "textures/cc/bloc/li__0050_f88a"
+    },
+    "ct:lily_pad_flower_base": {
+      "textures": "textures/cc/bloc/li__75d0_cb31"
+    },
+    "ct:floating_flower_big_leaf": {
+      "textures": "textures/cc/bloc/fl__e467_00f4"
+    },
+    "ct:floating_flower_small_leaf": {
+      "textures": "textures/cc/bloc/fl__03b4_1a5e"
+    },
+    "ct:floating_flower_pistil": {
+      "textures": "textures/cc/bloc/fl__cad5_c94e"
     },
     "ct:dripice_base": {
       "textures": "textures/cc/bloc/dri_bas_450c"
@@ -85,17 +301,41 @@
     "ct:dripice_merge_direction": {
       "textures": "textures/cc/bloc/dr__c6e2_9640"
     },
+    "ct:hanging_swamp_leaves_middle": {
+      "textures": "textures/cc/bloc/ha__55a4_d1f6"
+    },
+    "ct:hanging_swamp_leaves_tip": {
+      "textures": "textures/cc/bloc/ha__5fe1_7c4e"
+    },
     "ct:hanging_palm_leaves_middle": {
       "textures": "textures/cc/bloc/ha__769b_8e42"
     },
     "ct:hanging_palm_leaves_tip": {
       "textures": "textures/cc/bloc/ha__34a2_5656"
     },
+    "ct:hanging_oak_leaves_middle": {
+      "textures": "textures/cc/bloc/ha__a76b_ee65"
+    },
+    "ct:hanging_oak_leaves_tip": {
+      "textures": "textures/cc/bloc/ha__134a_6d81"
+    },
+    "ct:hanging_birch_leaves_middle": {
+      "textures": "textures/cc/bloc/ha__1bfd_c58c"
+    },
+    "ct:hanging_birch_leaves_tip": {
+      "textures": "textures/cc/bloc/ha__1e79_bbf4"
+    },
     "ct:end_twister_top": {
       "textures": "textures/cc/bloc/en__9905_e001"
     },
     "ct:end_twister_base": {
       "textures": "textures/cc/bloc/en__a870_5f00"
+    },
+    "ct:apple": {
+      "textures": "textures/cc/bloc/appl_fb63"
+    },
+    "ct:pinecone": {
+      "textures": "textures/cc/bloc/pine_f8a1"
     },
     "ct:invisible": {
       "textures": "textures/cc/misc/invi_923d"
@@ -121,11 +361,66 @@
     "ct:gilded_end_moss": {
       "textures": "textures/cc/bloc/gi__710a_f5ca"
     },
+    "ct:gilded_end_hanging_moss_middle": {
+      "textures": "textures/cc/bloc/gi__9770_a5b2"
+    },
+    "ct:gilded_end_vines": {
+      "textures": "textures/cc/bloc/gi__e7e6_6eaa"
+    },
+    "ct:gilded_end_hanging_moss_middle_berries": {
+      "textures": "textures/cc/bloc/gi__14ea_3b2e"
+    },
+    "ct:gilded_end_hanging_moss_tip": {
+      "textures": "textures/cc/bloc/gi__aec4_9de6"
+    },
+    "ct:gilded_end_hanging_moss_tip_berries": {
+      "textures": "textures/cc/bloc/gi__1f92_0bed"
+    },
+    "ct:endergloom_dripshroom_middle": {
+      "textures": "textures/cc/bloc/en__8fa1_a29e"
+    },
+    "ct:endergloom_dripshroom_tip": {
+      "textures": "textures/cc/bloc/en__732f_d555"
+    },
+    "ct:endergloom_dripshroom_base": {
+      "textures": "textures/cc/bloc/en__9f5e_1edd"
+    },
     "ct:suspicious_ice": {
       "textures": "textures/cc/bloc/sus_ice_f600"
     },
     "ct:end_mud": {
       "textures": "textures/cc/bloc/end_mud_075e"
+    },
+    "ct:umbral_end_liana_inner": {
+      "textures": "textures/cc/bloc/um__7cea_2f10"
+    },
+    "ct:umbral_end_liana_end": {
+      "textures": "textures/cc/bloc/um__719f_093a"
+    },
+    "ct:rift_essence": {
+      "textures": {
+        "variations": [
+          {
+            "path": "textures/cc/bloc/rif_ess_1480",
+            "weight": 5
+          },
+          {
+            "path": "textures/cc/bloc/ri__a20f_65ed",
+            "weight": 1
+          },
+          {
+            "path": "textures/cc/bloc/ri__38ad_9eed",
+            "weight": 1
+          },
+          {
+            "path": "textures/cc/bloc/ri__6803_981f",
+            "weight": 1
+          }
+        ]
+      }
+    },
+    "ct:rift_essence_end_stone": {
+      "textures": "textures/cc/bloc/ri__1bb6_d6fb"
     },
     "ct:end_stone_spike_base": {
       "textures": "textures/cc/bloc/en__93b0_066f"
@@ -154,17 +449,110 @@
     "ct:gilded_end_stone": {
       "textures": "textures/cc/bloc/gi__1a50_fd7f"
     },
+    "ct:endergloom_mushroom_stem": {
+      "textures": "textures/cc/bloc/en__2d66_fa65"
+    },
+    "ct:blue_berries_1": {
+      "textures": "textures/cc/bloc/bl__54e7_aa0f"
+    },
+    "ct:blue_berries_2": {
+      "textures": "textures/cc/bloc/bl__d145_acb9"
+    },
+    "ct:blue_berries_3": {
+      "textures": "textures/cc/bloc/bl__31b7_9aa4"
+    },
+    "ct:blue_berries_4": {
+      "textures": "textures/cc/bloc/bl__d930_42d5"
+    },
+    "ct:rice_1": {
+      "textures": "textures/cc/bloc/ric_1_8962"
+    },
+    "ct:rice_2": {
+      "textures": "textures/cc/bloc/ric_2_1528"
+    },
+    "ct:rice_3": {
+      "textures": "textures/cc/bloc/ric_3_f138"
+    },
+    "ct:rice_4": {
+      "textures": "textures/cc/bloc/ric_4_6a99"
+    },
+    "ct:strawberry_1": {
+      "textures": "textures/cc/bloc/str_1_45d9"
+    },
+    "ct:strawberry_2": {
+      "textures": "textures/cc/bloc/str_2_f43d"
+    },
+    "ct:strawberry_3": {
+      "textures": "textures/cc/bloc/str_3_280f"
+    },
+    "ct:strawberry_4": {
+      "textures": "textures/cc/bloc/str_4_eccc"
+    },
+    "ct:banana_bottom_1": {
+      "textures": "textures/cc/bloc/ba__4c64_2540"
+    },
+    "ct:banana_bottom_2": {
+      "textures": "textures/cc/bloc/ba__bcd4_d99d"
+    },
+    "ct:banana_bottom_3": {
+      "textures": "textures/cc/bloc/ba__6a75_eef2"
+    },
+    "ct:banana_bottom_4": {
+      "textures": "textures/cc/bloc/ba__7fc1_f092"
+    },
+    "ct:banana_bottom_5": {
+      "textures": "textures/cc/bloc/ba__77fd_4ee8"
+    },
+    "ct:banana_top_3": {
+      "textures": "textures/cc/bloc/ba__c1d6_a903"
+    },
+    "ct:banana_top_4": {
+      "textures": "textures/cc/bloc/ba__f35c_d2bc"
+    },
+    "ct:banana_top_5": {
+      "textures": "textures/cc/bloc/ba__b200_96d8"
+    },
     "ct:snowy_grass_stem": {
       "textures": "textures/cc/bloc/sn__3e3d_4f88"
     },
     "ct:snowy_grass": {
       "textures": "textures/cc/bloc/sno_gra_b2b8"
     },
+    "ct:umbral_end_grass": {
+      "textures": "textures/cc/bloc/um__bf46_1208"
+    },
+    "ct:umbral_end_short_grass": {
+      "textures": "textures/cc/bloc/um__af54_644e"
+    },
     "ct:endergloom_grass": {
       "textures": "textures/cc/bloc/end_gra_0d12"
     },
     "ct:endergloom_short_grass": {
       "textures": "textures/cc/bloc/en__4a4f_1772"
+    },
+    "ct:gilded_end_grass": {
+      "textures": "textures/cc/bloc/gi__0e01_9445"
+    },
+    "ct:gilded_end_short_grass": {
+      "textures": "textures/cc/bloc/gi__bd72_a7c8"
+    },
+    "ct:umbral_end_dead_bush": {
+      "textures": "textures/cc/bloc/um__798b_9900"
+    },
+    "ct:void_shroom": {
+      "textures": "textures/cc/bloc/voi_shr_fe9d"
+    },
+    "ct:tall_void_shroom": {
+      "textures": "textures/cc/bloc/ta__1cd0_04ec"
+    },
+    "ct:ruby_ore": {
+      "textures": "textures/cc/bloc/rub_ore_75c9"
+    },
+    "ct:voidshard_ore": {
+      "textures": "textures/cc/bloc/voi_ore_c2f1"
+    },
+    "ct:deepslate_ruby_ore": {
+      "textures": "textures/cc/bloc/de__13ca_9e8e"
     },
     "ct:palm_sapling": {
       "textures": "textures/cc/bloc/pal_sap_4563"
@@ -177,6 +565,24 @@
     },
     "ct:palm_log_top": {
       "textures": "textures/cc/bloc/pal_top_f291"
+    },
+    "ct:end_spire_log_side": {
+      "textures": "textures/cc/bloc/en__0ecc_9c04"
+    },
+    "ct:end_spire_log_top": {
+      "textures": "textures/cc/bloc/en__db73_dc27"
+    },
+    "ct:hollow_end_spire_log": {
+      "textures": "textures/cc/bloc/en__7e03_a92c"
+    },
+    "ct:umbral_end_spire_log_side": {
+      "textures": "textures/cc/bloc/um__b041_3116"
+    },
+    "ct:umbral_end_spire_log_top": {
+      "textures": "textures/cc/bloc/um__1c79_532f"
+    },
+    "ct:hollow_umbral_end_spire_log": {
+      "textures": "textures/cc/bloc/um__d007_cbea"
     }
   }
 }

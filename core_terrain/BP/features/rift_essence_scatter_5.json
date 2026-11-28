@@ -1,0 +1,13 @@
+{
+  "format_version": "1.13.0",
+  "minecraft:scatter_feature": {
+    "description": {
+      "identifier": "ct:rift_essence_scatter_5"
+    },
+    "iterations": 1,
+    "x": -2,
+    "y": -3,
+    "z": -2,
+    "places_feature": "ct:rift_essence_structure_5"
+  }
+}

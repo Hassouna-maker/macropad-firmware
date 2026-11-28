@@ -1,0 +1,480 @@
+{
+  "format_version": "1.26.0",
+  "minecraft:block": {
+    "description": {
+      "identifier": "ct:banana_seeds",
+      "menu_category": {
+        "category": "none"
+      },
+      "states": {
+        "ct:grow_state": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "ct:half": [
+          "bottom",
+          "top"
+        ],
+        "ct:wild": [
+          false,
+          true
+        ]
+      }
+    },
+    "components": {
+      "tag:ct:disable_silk_touch": {},
+      "minecraft:precipitation_interactions": {
+        "precipitation_behavior": "none"
+      },
+      "minecraft:liquid_detection": {
+        "detection_rules": [
+          {
+            "on_liquid_touches": "popped"
+          }
+        ]
+      },
+      "tag:plant": {},
+      "tag:nonsolid": {},
+      "minecraft:destructible_by_mining": {
+        "seconds_to_destroy": 0.0
+      },
+      "minecraft:destructible_by_explosion": {
+        "explosion_resistance": 0
+      },
+      "minecraft:geometry": "geometry.ct.cross",
+      "minecraft:material_instances": {
+        "*": {
+          "texture": "ct:banana_bottom_1",
+          "render_method": "alpha_test",
+          "ambient_occlusion": false,
+          "face_dimming": false
+        }
+      },
+      "minecraft:collision_box": false,
+      "minecraft:selection_box": {
+        "origin": [
+          -4,
+          0,
+          -4
+        ],
+        "size": [
+          8,
+          8,
+          8
+        ]
+      },
+      "minecraft:light_dampening": 0,
+      "minecraft:map_color": "#FFD700",
+      "minecraft:placement_filter": {
+        "conditions": [
+          {
+            "allowed_faces": [
+              "up"
+            ],
+            "block_filter": [
+              {
+                "name": "minecraft:farmland"
+              },
+              {
+                "name": "minecraft:grass_block"
+              }
+            ]
+          }
+        ]
+      },
+      "minecraft:loot": "loot_tables/cc/crops/banana.seeds.loot.json",
+      "minecraft:support": {
+        "shape": "stair"
+      },
+      "minecraft:connection_rule": {
+        "accepts_connections_from": "none"
+      },
+      "minecraft:redstone_conductivity": {
+        "redstone_conductor": true
+      }
+    },
+    "permutations": [
+      {
+        "condition": "query.block_state('ct:half') == 'bottom' && query.block_state('ct:grow_state') == 2",
+        "components": {
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:banana_bottom_2",
+              "render_method": "alpha_test",
+              "ambient_occlusion": false,
+              "face_dimming": false
+            }
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -4,
+              0,
+              -4
+            ],
+            "size": [
+              8,
+              16,
+              8
+            ]
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:half') == 'bottom' && query.block_state('ct:grow_state') == 3",
+        "components": {
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:banana_bottom_3",
+              "render_method": "alpha_test",
+              "ambient_occlusion": false,
+              "face_dimming": false
+            }
+          },
+          "minecraft:tick": {
+            "looping": false,
+            "interval_range": [
+              1,
+              1
+            ]
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -4,
+              0,
+              -4
+            ],
+            "size": [
+              8,
+              14,
+              8
+            ]
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:half') == 'bottom' && query.block_state('ct:grow_state') == 4",
+        "components": {
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:banana_bottom_4",
+              "render_method": "alpha_test",
+              "ambient_occlusion": false,
+              "face_dimming": false
+            }
+          },
+          "minecraft:loot": "loot_tables/cc/crops/banana.loot.json",
+          "minecraft:tick": {
+            "looping": false,
+            "interval_range": [
+              1,
+              1
+            ]
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -4,
+              0,
+              -4
+            ],
+            "size": [
+              8,
+              16,
+              8
+            ]
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:half') == 'bottom' && query.block_state('ct:grow_state') == 5",
+        "components": {
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:banana_bottom_5",
+              "render_method": "alpha_test",
+              "ambient_occlusion": false,
+              "face_dimming": false
+            }
+          },
+          "minecraft:tick": {
+            "looping": false,
+            "interval_range": [
+              1,
+              1
+            ]
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -4,
+              0,
+              -4
+            ],
+            "size": [
+              8,
+              14,
+              8
+            ]
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:half') == 'top' && query.block_state('ct:grow_state') == 3",
+        "components": {
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:banana_top_3",
+              "render_method": "alpha_test",
+              "ambient_occlusion": false,
+              "face_dimming": false
+            }
+          },
+          "minecraft:tick": {
+            "looping": false,
+            "interval_range": [
+              1,
+              1
+            ]
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -4,
+              0,
+              -4
+            ],
+            "size": [
+              8,
+              14,
+              8
+            ]
+          },
+          "minecraft:loot": "loot_tables/empty.json",
+          "minecraft:placement_filter": {
+            "conditions": [
+              {
+                "allowed_faces": [
+                  "up"
+                ],
+                "block_filter": [
+                  {
+                    "name": "ct:banana_seeds",
+                    "states": {
+                      "ct:half": "bottom"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:half') == 'top' && query.block_state('ct:grow_state') == 4",
+        "components": {
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:banana_top_4",
+              "render_method": "alpha_test",
+              "ambient_occlusion": false,
+              "face_dimming": false
+            }
+          },
+          "minecraft:loot": "loot_tables/empty.json",
+          "minecraft:placement_filter": {
+            "conditions": [
+              {
+                "allowed_faces": [
+                  "up"
+                ],
+                "block_filter": [
+                  {
+                    "name": "ct:banana_seeds",
+                    "states": {
+                      "ct:half": "bottom"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -4,
+              0,
+              -4
+            ],
+            "size": [
+              8,
+              16,
+              8
+            ]
+          },
+          "minecraft:tick": {
+            "looping": false,
+            "interval_range": [
+              1,
+              1
+            ]
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:half') == 'top' && query.block_state('ct:grow_state') == 5",
+        "components": {
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:banana_top_5",
+              "render_method": "alpha_test",
+              "ambient_occlusion": false,
+              "face_dimming": false
+            }
+          },
+          "minecraft:selection_box": {
+            "origin": [
+              -4,
+              0,
+              -4
+            ],
+            "size": [
+              8,
+              14,
+              8
+            ]
+          },
+          "minecraft:loot": "loot_tables/empty.json",
+          "minecraft:placement_filter": {
+            "conditions": [
+              {
+                "allowed_faces": [
+                  "up"
+                ],
+                "block_filter": [
+                  {
+                    "name": "ct:banana_seeds",
+                    "states": {
+                      "ct:half": "bottom"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "minecraft:tick": {
+            "looping": false,
+            "interval_range": [
+              1,
+              1
+            ]
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:half') == 'top' && query.block_state('ct:wild') == 0",
+        "components": {
+          "minecraft:geometry": "geometry.ct.double_cross.top",
+          "minecraft:transformation": {
+            "scale": [
+              1,
+              2.0,
+              1
+            ],
+            "scale_pivot": [
+              0,
+              0.5,
+              0
+            ],
+            "translation": [
+              0,
+              -0.05,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:half') == 'bottom' && query.block_state('ct:grow_state') > 2 && query.block_state('ct:wild') == 0",
+        "components": {
+          "minecraft:geometry": "geometry.ct.double_cross.bottom",
+          "minecraft:transformation": {
+            "scale": [
+              1,
+              2.0,
+              1
+            ],
+            "scale_pivot": [
+              0,
+              -0.5,
+              0
+            ],
+            "translation": [
+              0,
+              -0.05,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:wild') == 1 && query.block_state('ct:half') == 'bottom'",
+        "components": {
+          "minecraft:geometry": "geometry.ct.double_cross.bottom",
+          "minecraft:transformation": {
+            "scale": [
+              1,
+              2.0,
+              1
+            ],
+            "scale_pivot": [
+              0,
+              -0.5,
+              0
+            ],
+            "translation": [
+              0,
+              0,
+              0
+            ]
+          },
+          "minecraft:placement_filter": {
+            "conditions": [
+              {
+                "allowed_faces": [
+                  "up"
+                ],
+                "block_filter": [
+                  {
+                    "name": "minecraft:grass_block"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('ct:wild') == 1 && query.block_state('ct:half') == 'top'",
+        "components": {
+          "minecraft:geometry": "geometry.ct.double_cross.top",
+          "minecraft:transformation": {
+            "scale": [
+              1,
+              2.0,
+              1
+            ],
+            "scale_pivot": [
+              0,
+              0.5,
+              0
+            ],
+            "translation": [
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

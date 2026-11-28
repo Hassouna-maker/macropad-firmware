@@ -1,0 +1,8 @@
+{
+  "format_version": "1.21.30",
+  "minecraft:texture_set": {
+    "color": "knot_8f81",
+    "heightmap": "knot_8f81_heightmap",
+    "metalness_emissive_roughness_subsurface": "knot_8f81_mers"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:weighted_random_feature": {
+    "description": {
+      "identifier": "ct:meadow_grass_weighted"
+    },
+    "features": [
+      [
+        "ct:meadow_grass_block_1",
+        3
+      ],
+      [
+        "ct:meadow_grass_block_2",
+        1
+      ]
+    ]
+  }
+}
