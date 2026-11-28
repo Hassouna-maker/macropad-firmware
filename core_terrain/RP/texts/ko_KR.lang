@@ -1,4 +1,4 @@
-pack.name=Core Terrain
+pack.name=Core Terrain v1.2.2
 pack.description=Terrain and biomes extracted from Core Craft
 tile.ct:smooth_end_stone.name=매끄러운 끝 돌
 item.ct:smooth_end_stone=매끄러운 끝 돌
