@@ -1,9 +1,0 @@
-{
-  "format_version": "1.13.0",
-  "minecraft:aggregate_feature": {
-    "description": {
-      "identifier": "ct:crop_banana_sequence"
-    },
-    "features": ["ct:crop_banana_bottom_feature", "ct:crop_banana_top_scatter"]
-  }
-}

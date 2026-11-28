@@ -1,8 +1,0 @@
-{
-  "format_version": "1.21.30",
-  "minecraft:texture_set": {
-    "color": "des_gra_a49d",
-    "heightmap": "des_gra_a49d_heightmap",
-    "metalness_emissive_roughness_subsurface": "des_gra_a49d_mers"
-  }
-}

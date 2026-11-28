@@ -1,8 +1,0 @@
-{
-  "format_version": "1.21.30",
-  "minecraft:texture_set": {
-    "color": "jun_gra_eeca",
-    "heightmap": "jun_gra_eeca_heightmap",
-    "metalness_emissive_roughness_subsurface": "jun_gra_eeca_mers"
-  }
-}

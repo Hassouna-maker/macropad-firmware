@@ -1,8 +1,0 @@
-{
-  "format_version": "1.21.30",
-  "minecraft:texture_set": {
-    "color": "wal_pla_6288",
-    "heightmap": "wal_pla_6288_heightmap",
-    "metalness_emissive_roughness_subsurface": "wal_pla_6288_mers"
-  }
-}
