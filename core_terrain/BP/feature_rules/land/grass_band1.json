@@ -3,10 +3,10 @@
   "minecraft:feature_rules": {
     "description": {
       "identifier": "ct:land_grass_band1",
-      "places_feature": "ct:land/grass_h1"
+      "places_feature": "ct:land/grass_h6"
     },
     "conditions": {
-      "placement_pass": "final_pass",
+      "placement_pass": "after_surface_pass",
       "minecraft:biome_filter": {
         "any_of": [
           {
@@ -47,7 +47,7 @@
           15
         ]
       },
-      "y": "(((math.sin(v.worldx*2.4) + math.sin(v.worldz*3.1) + math.sin((v.worldx + v.worldz)*1.7)) / 3) > 0.2 && ((math.sin(v.worldx*2.4) + math.sin(v.worldz*3.1) + math.sin((v.worldx + v.worldz)*1.7)) / 3) <= 0.3) ? (q.heightmap(v.worldx, v.worldz)) : -100",
+      "y": "(((math.sin(v.worldx*2.4) + math.sin(v.worldz*3.1) + math.sin((v.worldx + v.worldz)*1.7)) / 3) > 0.2 && ((math.sin(v.worldx*2.4) + math.sin(v.worldz*3.1) + math.sin((v.worldx + v.worldz)*1.7)) / 3) <= 0.3) ? (q.heightmap(v.worldx, v.worldz) - 1) : -100",
       "z": {
         "distribution": "fixed_grid",
         "extent": [
