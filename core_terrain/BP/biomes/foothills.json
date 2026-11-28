@@ -52,7 +52,7 @@
               "minecraft:taiga",
               "minecraft:birch_forest"
             ],
-            "amount": 0.3,
+            "amount": 0.4,
             "noise_frequency_scale": 0.25
           }
         ]

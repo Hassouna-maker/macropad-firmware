@@ -39,7 +39,7 @@
     },
     "distribution": {
       "iterations": 256,
-      "scatter_chance": 90.0,
+      "scatter_chance": 100.0,
       "x": {
         "distribution": "fixed_grid",
         "extent": [
@@ -47,7 +47,7 @@
           15
         ]
       },
-      "y": "(q.noise(v.worldx/9, v.worldz/9) > 0.55) ? (q.heightmap(v.worldx, v.worldz)) : -100",
+      "y": "(((math.sin(v.worldx*7.3) + math.sin(v.worldz*9.1) + math.sin((v.worldx + v.worldz)*5.2)) / 3) > 0.6) ? (q.heightmap(v.worldx, v.worldz)) : -100",
       "z": {
         "distribution": "fixed_grid",
         "extent": [

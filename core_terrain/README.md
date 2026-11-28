@@ -14,3 +14,4 @@ they use. No villages, ruins, temples or mineshafts.
 - `ct:alpine_peaks` (very high snowy mountains) and `ct:foothills` (rolling forested hills) biomes that replace parts of forest/plains/taiga/mountain areas.
 - Natural snow cover: snow layers get thicker with altitude, with a ragged, noise-shifted snow line.
 - `ct:grass_layer`: an 8-height grass layer block placed in noise patches on grass for low natural mounds.
+- v1.4.1: palm leaf culling rule restored (palms no longer see-through); layers use a deterministic pattern; rare large caverns (`ct:land_big_cavern`, ~3% of chunks); mountain biomes more common. Find mountains with `/locate biome ct:alpine_peaks`.

@@ -24,7 +24,7 @@
     },
     "distribution": {
       "iterations": 256,
-      "scatter_chance": 70.0,
+      "scatter_chance": 85.0,
       "x": {
         "distribution": "fixed_grid",
         "extent": [
@@ -32,7 +32,7 @@
           15
         ]
       },
-      "y": "((q.heightmap(v.worldx, v.worldz) + q.noise(v.worldx/24, v.worldz/24)*14) > 108 && (q.heightmap(v.worldx, v.worldz) + q.noise(v.worldx/24, v.worldz/24)*14) <= 120) ? (q.heightmap(v.worldx, v.worldz)) : -100",
+      "y": "((q.heightmap(v.worldx, v.worldz) + ((math.sin(v.worldx*3.1) + math.sin(v.worldz*2.7) + math.sin((v.worldx - v.worldz)*1.9)) / 3)*10) > 104 && (q.heightmap(v.worldx, v.worldz) + ((math.sin(v.worldx*3.1) + math.sin(v.worldz*2.7) + math.sin((v.worldx - v.worldz)*1.9)) / 3)*10) <= 116) ? (q.heightmap(v.worldx, v.worldz)) : -100",
       "z": {
         "distribution": "fixed_grid",
         "extent": [

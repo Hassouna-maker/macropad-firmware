@@ -1,0 +1,28 @@
+{
+  "format_version": "1.13.0",
+  "minecraft:cave_carver_feature": {
+    "description": {
+      "identifier": "ct:land/big_cavern"
+    },
+    "fill_with": "minecraft:air",
+    "width_modifier": 3.0,
+    "skip_carve_chance": 0,
+    "height_limit": 20,
+    "y_scale": [
+      0.6,
+      1.0
+    ],
+    "horizontal_radius_multiplier": [
+      1.5,
+      2.5
+    ],
+    "vertical_radius_multiplier": [
+      1.2,
+      2.0
+    ],
+    "floor_level": [
+      -0.7,
+      0.3
+    ]
+  }
+}

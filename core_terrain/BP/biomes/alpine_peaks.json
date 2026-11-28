@@ -72,7 +72,7 @@
               "minecraft:plains",
               "minecraft:ice_plains"
             ],
-            "amount": 0.16,
+            "amount": 0.32,
             "noise_frequency_scale": 0.3
           }
         ]

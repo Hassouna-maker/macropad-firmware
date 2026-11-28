@@ -32,7 +32,7 @@
           15
         ]
       },
-      "y": "((q.heightmap(v.worldx, v.worldz) + q.noise(v.worldx/24, v.worldz/24)*14) > 134) ? (q.heightmap(v.worldx, v.worldz)) : -100",
+      "y": "((q.heightmap(v.worldx, v.worldz) + ((math.sin(v.worldx*3.1) + math.sin(v.worldz*2.7) + math.sin((v.worldx - v.worldz)*1.9)) / 3)*10) > 130) ? (q.heightmap(v.worldx, v.worldz)) : -100",
       "z": {
         "distribution": "fixed_grid",
         "extent": [
