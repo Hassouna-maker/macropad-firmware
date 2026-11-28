@@ -1,0 +1,23 @@
+{
+  "format_version": "1.21.60",
+  "minecraft:item": {
+    "description": {
+      "identifier": "ct:umbral_end_liana",
+      "menu_category": {
+        "category": "nature"
+      }
+    },
+    "components": {
+      "minecraft:block_placer": {
+        "block": "ct:umbral_end_liana",
+        "use_on": [],
+        "replace_block_item": true
+      },
+      "minecraft:icon": "ct:umbral_end_liana",
+      "minecraft:max_stack_size": 64,
+      "minecraft:compostable": {
+        "composting_chance": 65
+      }
+    }
+  }
+}

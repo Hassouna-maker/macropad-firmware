@@ -1,0 +1,21 @@
+{
+  "format_version": "1.21.100",
+  "minecraft:item": {
+    "description": {
+      "identifier": "ct:void_shroom",
+      "menu_category": {
+        "category": "nature",
+        "group": "minecraft:itemGroup.name.grass"
+      }
+    },
+    "components": {
+      "minecraft:max_stack_size": 64,
+      "minecraft:block_placer": {
+        "block": "ct:void_shroom",
+        "use_on": [],
+        "replace_block_item": true
+      },
+      "minecraft:icon": "ct:void_shroom"
+    }
+  }
+}

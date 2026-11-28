@@ -1,0 +1,207 @@
+{
+  "resource_pack_name": "pack.name",
+  "texture_name": "atlas.items",
+  "texture_data": {
+    "ct:end_stone_spike": {
+      "textures": "textures/cc/bloc/en__58ad_16f5"
+    },
+    "ct:gilded_end_grass": {
+      "textures": "textures/cc/bloc/gi__0e01_9445"
+    },
+    "ct:wall_mushrooms": {
+      "textures": "textures/cc/item/wal_mus_7c36"
+    },
+    "ct:gilded_end_hanging_moss": {
+      "textures": "textures/cc/bloc/gi__9770_a5b2"
+    },
+    "ct:pale_grass": {
+      "textures": "textures/cc/item/pal_gra_be00"
+    },
+    "ct:tall_brown_mushrooms": {
+      "textures": "textures/cc/bloc/ta__4a32_b1a2"
+    },
+    "ct:daisy_carpet": {
+      "textures": "textures/cc/item/dai_car_056a"
+    },
+    "ct:umbral_end_dead_bush": {
+      "textures": "textures/cc/bloc/um__798b_9900"
+    },
+    "ct:tall_pale_mushrooms": {
+      "textures": "textures/cc/bloc/ta__bd9b_f069"
+    },
+    "ct:wide_fern": {
+      "textures": "textures/cc/item/wid_fer_0211"
+    },
+    "ct:jungle_grass": {
+      "textures": "textures/cc/item/jun_gra_c040"
+    },
+    "ct:wall_plant": {
+      "textures": "textures/cc/item/wal_pla_dfa6"
+    },
+    "ct:endergloom_dripshroom": {
+      "textures": "textures/cc/item/end_dri_c9cb"
+    },
+    "ct:hanging_palm_leaves": {
+      "textures": "textures/cc/item/ha__585b_f723"
+    },
+    "ct:forest_bush": {
+      "textures": "textures/cc/item/for_bus_6392"
+    },
+    "ct:umbral_end_liana": {
+      "textures": "textures/cc/bloc/um__719f_093a"
+    },
+    "ct:endergloom_grass": {
+      "textures": "textures/cc/bloc/end_gra_0d12"
+    },
+    "ct:mycelium_grass": {
+      "textures": "textures/cc/bloc/myc_gra_8193"
+    },
+    "ct:knotweed": {
+      "textures": "textures/cc/bloc/knot_8f81"
+    },
+    "ct:hanging_swamp_leaves": {
+      "textures": "textures/cc/item/ha__9834_097f"
+    },
+    "ct:shells": {
+      "textures": "textures/cc/item/shel_0f77"
+    },
+    "ct:blue_berries": {
+      "textures": "textures/cc/item/cr__6e69_8d79"
+    },
+    "ct:endergloom_short_grass": {
+      "textures": "textures/cc/bloc/en__4a4f_1772"
+    },
+    "ct:icicles": {
+      "textures": "textures/cc/item/icic_43b6"
+    },
+    "ct:clover": {
+      "textures": "textures/cc/item/clov_0e09"
+    },
+    "ct:coconut": {
+      "textures": "textures/cc/item/cro_coc_2aa2"
+    },
+    "ct:pinecone": {
+      "textures": "textures/cc/item/pine_63f2"
+    },
+    "ct:dry_tall_grass": {
+      "textures": "textures/cc/item/dr__edf9_560a"
+    },
+    "ct:reed": {
+      "textures": "textures/cc/item/reed_18a2"
+    },
+    "ct:umbral_end_short_grass": {
+      "textures": "textures/cc/bloc/um__af54_644e"
+    },
+    "ct:tall_void_shroom": {
+      "textures": "textures/cc/bloc/ta__1cd0_04ec"
+    },
+    "ct:pebbles": {
+      "textures": "textures/cc/item/pebb_d488"
+    },
+    "ct:barnacles": {
+      "textures": "textures/cc/item/barn_e0d1"
+    },
+    "ct:end_stone_pebbles": {
+      "textures": "textures/cc/item/en__365d_b10f"
+    },
+    "ct:blue_jungle_plant": {
+      "textures": "textures/cc/item/bl__5732_0205"
+    },
+    "ct:rice": {
+      "textures": "textures/cc/item/cro_ric_3b38"
+    },
+    "ct:dry_bush": {
+      "textures": "textures/cc/item/dry_bus_28d7"
+    },
+    "ct:dripice": {
+      "textures": "textures/cc/bloc/dri_tip_5869"
+    },
+    "ct:desert_tall_grass": {
+      "textures": "textures/cc/item/de__1e4d_5555"
+    },
+    "ct:jungle_carpet": {
+      "textures": "textures/cc/bloc/ju__ac6e_6ca3"
+    },
+    "ct:umbral_end_grass": {
+      "textures": "textures/cc/bloc/um__bf46_1208"
+    },
+    "ct:lavender": {
+      "textures": "textures/cc/item/lave_0387"
+    },
+    "ct:snowy_grass": {
+      "textures": "textures/cc/item/sno_gra_6de7"
+    },
+    "ct:gilded_end_short_grass": {
+      "textures": "textures/cc/bloc/gi__bd72_a7c8"
+    },
+    "ct:taiga_red_plant": {
+      "textures": "textures/cc/item/ta__9fa4_39b3"
+    },
+    "ct:duckweed": {
+      "textures": "textures/cc/bloc/duck_29c4"
+    },
+    "ct:taiga_orange_plant": {
+      "textures": "textures/cc/item/ta__2c55_d8dd"
+    },
+    "ct:desert_grass": {
+      "textures": "textures/cc/bloc/des_gra_a49d"
+    },
+    "ct:end_twister": {
+      "textures": "textures/cc/bloc/en__a870_5f00"
+    },
+    "ct:swamp_grass": {
+      "textures": "textures/cc/item/swa_gra_bd2f"
+    },
+    "ct:palm_sapling": {
+      "textures": "textures/cc/bloc/pal_sap_4563"
+    },
+    "ct:liana": {
+      "textures": "textures/cc/item/lian_d0bc"
+    },
+    "ct:gilded_end_vines": {
+      "textures": "textures/cc/bloc/gi__e7e6_6eaa"
+    },
+    "ct:yellow_jungle_plant": {
+      "textures": "textures/cc/item/ye__a945_9643"
+    },
+    "ct:lily_pad_flower": {
+      "textures": "textures/cc/item/li__7579_c461"
+    },
+    "ct:dry_grass": {
+      "textures": "textures/cc/item/dry_gra_643c"
+    },
+    "ct:void_shroom": {
+      "textures": "textures/cc/bloc/voi_shr_fe9d"
+    },
+    "ct:banana_seeds": {
+      "textures": "textures/cc/item/cr__6f1d_c4e3"
+    },
+    "ct:wall_plant_yellow": {
+      "textures": "textures/cc/item/wa__14ac_f1c4"
+    },
+    "ct:floating_flower": {
+      "textures": "textures/cc/item/flo_flo_65c5"
+    },
+    "ct:small_lily_pads": {
+      "textures": "textures/cc/bloc/sm__ef39_32f0"
+    },
+    "ct:hanging_oak_leaves": {
+      "textures": "textures/cc/item/ha__a2c5_ade1"
+    },
+    "ct:swamp_fern": {
+      "textures": "textures/cc/item/swa_fer_d9d5"
+    },
+    "ct:small_cactus": {
+      "textures": "textures/cc/bloc/sma_cac_5bf0"
+    },
+    "ct:tall_red_mushrooms": {
+      "textures": "textures/cc/bloc/ta__054b_30e8"
+    },
+    "ct:strawberry": {
+      "textures": "textures/cc/item/cro_str_b3ba"
+    },
+    "ct:hanging_birch_leaves": {
+      "textures": "textures/cc/item/ha__d1eb_f8ae"
+    }
+  }
+}

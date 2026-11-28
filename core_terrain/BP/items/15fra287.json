@@ -1,0 +1,27 @@
+{
+  "format_version": "1.21.70",
+  "minecraft:item": {
+    "description": {
+      "identifier": "ct:coconut_spawner",
+      "menu_category": {
+        "category": "nature"
+      }
+    },
+    "components": {
+      "minecraft:tags": {
+        "tags": [
+          "log"
+        ]
+      },
+      "minecraft:block_placer": {
+        "block": "ct:coconut_spawner",
+        "use_on": [],
+        "replace_block_item": true
+      },
+      "minecraft:fuel": {
+        "duration": 15
+      },
+      "minecraft:max_stack_size": 64
+    }
+  }
+}
