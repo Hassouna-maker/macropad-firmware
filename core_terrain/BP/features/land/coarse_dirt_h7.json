@@ -1,0 +1,33 @@
+{
+  "format_version": "1.21.40",
+  "minecraft:single_block_feature": {
+    "description": {
+      "identifier": "ct:land/coarse_dirt_h7"
+    },
+    "places_block": {
+      "name": "ct:coarse_dirt_layer",
+      "states": {
+        "ct:layer": 7
+      }
+    },
+    "enforce_placement_rules": false,
+    "enforce_survivability_rules": false,
+    "may_replace": [
+      "minecraft:air",
+      "minecraft:short_grass",
+      "minecraft:fern",
+      "minecraft:dandelion",
+      "minecraft:poppy",
+      "minecraft:azure_bluet",
+      "minecraft:oxeye_daisy",
+      "minecraft:cornflower",
+      "minecraft:leaf_litter",
+      "ct:leaf_litter"
+    ],
+    "may_attach_to": {
+      "bottom": [
+        "minecraft:coarse_dirt"
+      ]
+    }
+  }
+}

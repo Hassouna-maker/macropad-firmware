@@ -11,8 +11,8 @@
       },
       "minecraft:overworld_height": {
         "noise_params": [
-          0.75,
-          0.45
+          1.05,
+          0.8
         ]
       },
       "minecraft:surface_builder": {
@@ -31,13 +31,40 @@
           {
             "materials": {
               "top_material": {
+                "name": "minecraft:stone"
+              },
+              "mid_material": {
+                "name": "minecraft:stone"
+              }
+            },
+            "noise_frequency_scale": 0.18,
+            "noise_range": [
+              0.62,
+              1.0
+            ]
+          },
+          {
+            "materials": {
+              "top_material": {
+                "name": "minecraft:gravel"
+              }
+            },
+            "noise_frequency_scale": 0.3,
+            "noise_range": [
+              0.5,
+              0.62
+            ]
+          },
+          {
+            "materials": {
+              "top_material": {
                 "name": "minecraft:coarse_dirt"
               }
             },
             "noise_frequency_scale": 0.25,
             "noise_range": [
-              0.5,
-              1.0
+              0.3,
+              0.5
             ]
           }
         ]

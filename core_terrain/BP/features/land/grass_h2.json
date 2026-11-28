@@ -20,7 +20,9 @@
       "minecraft:poppy",
       "minecraft:azure_bluet",
       "minecraft:oxeye_daisy",
-      "minecraft:cornflower"
+      "minecraft:cornflower",
+      "minecraft:leaf_litter",
+      "ct:leaf_litter"
     ],
     "may_attach_to": {
       "bottom": [

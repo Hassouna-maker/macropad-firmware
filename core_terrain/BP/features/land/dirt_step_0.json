@@ -1,0 +1,12 @@
+{
+  "format_version": "1.13.0",
+  "minecraft:aggregate_feature": {
+    "description": {
+      "identifier": "ct:land/dirt_step_0"
+    },
+    "features": [
+      "ct:land/dirt_h0",
+      "ct:land/coarse_dirt_h0"
+    ]
+  }
+}

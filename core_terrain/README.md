@@ -20,3 +20,4 @@ they use. No villages, ruins, temples or mineshafts.
 - v1.6.0: 8 missing block models restored (palm leaves, End moss, thin logs, pebbles, barnacles, small cactus); grass layer inventory icon fixed; new dirt and moss layers.
 - v1.7.0: layers sit on top of the ground again (replacing grass plants) and stack like snow layers when you use one on another; bone meal grows palm saplings (small script).
 - v1.8.0: grass and moss layers form steps at the base of one-block ledges; dirt and coarse dirt layers are craft-only (3 blocks in a row -> 6 layers, like snow); layers stack.
+- v1.9.0: layers in every overworld biome and generated before trees (so forests work), irregular steps, dirt/coarse dirt layers on dirt/coarse dirt ledges, leaf litter generation removed, foothills are now real rocky mountains.
