@@ -2,12 +2,12 @@
   "format_version": "1.21.40",
   "minecraft:single_block_feature": {
     "description": {
-      "identifier": "ct:land/moss_h6"
+      "identifier": "ct:land/red_sand_h5"
     },
     "places_block": {
-      "name": "ct:moss_layer",
+      "name": "ct:red_sand_layer",
       "states": {
-        "ct:layer": 6
+        "ct:layer": 5
       }
     },
     "enforce_placement_rules": false,
@@ -22,11 +22,12 @@
       "minecraft:oxeye_daisy",
       "minecraft:cornflower",
       "minecraft:leaf_litter",
-      "ct:leaf_litter"
+      "ct:leaf_litter",
+      "minecraft:dead_bush"
     ],
     "may_attach_to": {
       "bottom": [
-        "minecraft:grass_block"
+        "minecraft:red_sand"
       ]
     }
   }

@@ -393,5 +393,11 @@
   },
   "ct:coarse_dirt_layer": {
     "sound": "gravel"
+  },
+  "ct:sand_layer": {
+    "sound": "sand"
+  },
+  "ct:red_sand_layer": {
+    "sound": "sand"
   }
 }

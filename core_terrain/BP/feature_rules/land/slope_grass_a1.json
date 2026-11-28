@@ -27,7 +27,7 @@
           15
         ]
       },
-      "y": "((((math.sin(v.worldx*2.9 + 200) + math.sin(v.worldz*3.4 + 20) + math.sin((v.worldx + v.worldz)*2.3 + 90)) / 3) <= 0.3) && ((math.max(math.max(q.heightmap(v.worldx + (1), v.worldz + (0)), q.heightmap(v.worldx + (-1), v.worldz + (0))), math.max(q.heightmap(v.worldx + (0), v.worldz + (1)), q.heightmap(v.worldx + (0), v.worldz + (-1)))) - q.heightmap(v.worldx, v.worldz)) == 1) && (((math.sin(v.worldx*91.7 + v.worldz*37.3) + math.sin(v.worldx*23.1 - v.worldz*58.9)) / 2) > -0.2 && ((math.sin(v.worldx*91.7 + v.worldz*37.3) + math.sin(v.worldx*23.1 - v.worldz*58.9)) / 2) <= 0.5)) ? (q.heightmap(v.worldx, v.worldz)) : -100",
+      "y": "(((math.max(math.max(q.heightmap(v.worldx + (1), v.worldz + (0)), q.heightmap(v.worldx + (-1), v.worldz + (0))), math.max(q.heightmap(v.worldx + (0), v.worldz + (1)), q.heightmap(v.worldx + (0), v.worldz + (-1)))) - q.heightmap(v.worldx, v.worldz)) == 1) && (((math.sin(v.worldx*91.7 + v.worldz*37.3) + math.sin(v.worldx*23.1 - v.worldz*58.9)) / 2) > -0.2 && ((math.sin(v.worldx*91.7 + v.worldz*37.3) + math.sin(v.worldx*23.1 - v.worldz*58.9)) / 2) <= 0.5)) ? (q.heightmap(v.worldx, v.worldz)) : -100",
       "z": {
         "distribution": "fixed_grid",
         "extent": [

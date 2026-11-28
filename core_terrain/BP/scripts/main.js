@@ -4,6 +4,8 @@ import { world, system, GameMode } from "@minecraft/server";
 const LAYERS = {
   "ct:grass_layer": "minecraft:grass_block",
   "ct:dirt_layer": "minecraft:dirt",
+  "ct:sand_layer": "minecraft:sand",
+  "ct:red_sand_layer": "minecraft:red_sand",
   "ct:coarse_dirt_layer": "minecraft:coarse_dirt",
   "ct:moss_layer": "minecraft:moss_block",
 };
