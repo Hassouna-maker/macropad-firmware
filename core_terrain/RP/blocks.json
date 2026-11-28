@@ -384,5 +384,11 @@
   },
   "ct:grass_layer": {
     "sound": "grass"
+  },
+  "ct:dirt_layer": {
+    "sound": "gravel"
+  },
+  "ct:moss_layer": {
+    "sound": "moss_block"
   }
 }

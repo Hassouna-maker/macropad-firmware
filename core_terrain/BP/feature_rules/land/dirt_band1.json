@@ -1,0 +1,60 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:feature_rules": {
+    "description": {
+      "identifier": "ct:land_dirt_band1",
+      "places_feature": "ct:land/dirt_h3"
+    },
+    "conditions": {
+      "placement_pass": "after_surface_pass",
+      "minecraft:biome_filter": {
+        "any_of": [
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "forest"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "plains"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "hills"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "taiga"
+          },
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "extreme_hills"
+          }
+        ]
+      }
+    },
+    "distribution": {
+      "iterations": 256,
+      "scatter_chance": 100.0,
+      "x": {
+        "distribution": "fixed_grid",
+        "extent": [
+          0,
+          15
+        ]
+      },
+      "y": "(((math.sin(v.worldx*3.7 + 40) + math.sin(v.worldz*4.3 + 110) + math.sin((v.worldx - v.worldz)*2.9)) / 3) > 0.6 && ((math.sin(v.worldx*3.7 + 40) + math.sin(v.worldz*4.3 + 110) + math.sin((v.worldx - v.worldz)*2.9)) / 3) <= 0.75) ? (q.heightmap(v.worldx, v.worldz) - 1) : -100",
+      "z": {
+        "distribution": "fixed_grid",
+        "extent": [
+          0,
+          15
+        ]
+      }
+    }
+  }
+}

@@ -17,3 +17,4 @@ they use. No villages, ruins, temples or mineshafts.
 - v1.4.1: palm leaf culling rule restored (palms no longer see-through); layers use a deterministic pattern; rare large caverns (`ct:land_big_cavern`, ~3% of chunks); mountain biomes more common. Find mountains with `/locate biome ct:alpine_peaks`.
 - v1.5.0: item definitions and inventory icons for the included blocks; grass/snow layers rebuilt as smooth height gradients.
 - v1.5.1: grass layers now replace the surface grass block (placing them in the air above was blocked by grass plants).
+- v1.6.0: 8 missing block models restored (palm leaves, End moss, thin logs, pebbles, barnacles, small cactus); grass layer inventory icon fixed; new dirt and moss layers.

@@ -1,4 +1,4 @@
-pack.name=Core Terrain v1.5.1
+pack.name=Core Terrain v1.6.0
 pack.description=Terrain, biomes and trees extracted from Core Craft
 tile.ct:smooth_end_stone.name=光滑端石
 item.ct:smooth_end_stone=光滑端石
@@ -346,3 +346,9 @@ item.ct:tall_pale_mushrooms.desc=§7帶有蒼白菌蓋的高蘑菇。
 
 tile.ct:grass_layer.name=Grass Layer
 item.ct:grass_layer=Grass Layer
+
+tile.ct:dirt_layer.name=Dirt Layer
+item.ct:dirt_layer=Dirt Layer
+
+tile.ct:moss_layer.name=Moss Layer
+item.ct:moss_layer=Moss Layer

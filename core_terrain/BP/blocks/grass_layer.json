@@ -21,6 +21,31 @@
       }
     },
     "components": {
+      "minecraft:geometry": "geometry.ct.layer_3",
+      "minecraft:collision_box": {
+        "origin": [
+          -8,
+          0,
+          -8
+        ],
+        "size": [
+          16,
+          6,
+          16
+        ]
+      },
+      "minecraft:selection_box": {
+        "origin": [
+          -8,
+          0,
+          -8
+        ],
+        "size": [
+          16,
+          8,
+          16
+        ]
+      },
       "minecraft:material_instances": {
         "*": {
           "texture": "grass_top",
@@ -36,8 +61,8 @@
       "minecraft:destructible_by_explosion": {
         "explosion_resistance": 0
       },
-      "tag:minecraft:is_shovel_item_destructible": {},
-      "tag:grass": {}
+      "tag:grass": {},
+      "tag:minecraft:is_shovel_item_destructible": {}
     },
     "permutations": [
       {
