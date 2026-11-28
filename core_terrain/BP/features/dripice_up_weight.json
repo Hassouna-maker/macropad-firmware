@@ -1,0 +1,15 @@
+{
+  "format_version": "1.13.0",
+  "minecraft:weighted_random_feature": {
+    "description": {
+      "identifier": "ct:dripice_up_weight"
+    },
+    "features": [
+      ["ct:dripice_up_1_feature", 1],
+      ["ct:dripice_up_2_feature", 1],
+      ["ct:dripice_up_3_feature", 1],
+      ["ct:dripice_up_4_feature", 1],
+      ["ct:dripice_up_5_feature", 1]
+    ]
+  }
+}

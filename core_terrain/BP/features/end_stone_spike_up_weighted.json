@@ -1,0 +1,38 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:weighted_random_feature": {
+    "description": {
+      "identifier": "ct:end_stone_spike_up_weighted"
+    },
+    "features": [
+      [
+        "ct:end_stone_spike_up_1_feature",
+        1
+      ],
+      [
+        "ct:end_stone_spike_up_2_feature",
+        1
+      ],
+      [
+        "ct:end_stone_spike_up_3_feature",
+        1
+      ],
+      [
+        "ct:end_stone_spike_up_4_feature",
+        1
+      ],
+      [
+        "ct:end_stone_spike_up_5_feature",
+        1
+      ],
+      [
+        "ct:end_stone_spike_up_6_offset",
+        1
+      ],
+      [
+        "ct:end_stone_spike_up_7_offset",
+        1
+      ]
+    ]
+  }
+}

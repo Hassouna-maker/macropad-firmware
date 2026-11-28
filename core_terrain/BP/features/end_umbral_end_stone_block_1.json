@@ -1,0 +1,20 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:single_block_feature": {
+    "description": {
+      "identifier": "ct:end_umbral_end_stone_block_1"
+    },
+    "places_block": "ct:umbral_end_stone",
+    "enforce_placement_rules": false,
+    "enforce_survivability_rules": false,
+    "may_attach_to": {
+      "top": [
+        "ct:umbral_soil",
+        "ct:umbral_end_stone"
+      ]
+    },
+    "may_replace": [
+      "minecraft:end_stone"
+    ]
+  }
+}

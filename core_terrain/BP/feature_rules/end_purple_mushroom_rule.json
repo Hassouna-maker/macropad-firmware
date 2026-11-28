@@ -1,0 +1,40 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:feature_rules": {
+    "description": {
+      "identifier": "ct:end_purple_mushroom_rule",
+      "places_feature": "ct:end_purple_mushroom_sequence"
+    },
+    "conditions": {
+      "placement_pass": "surface_pass",
+      "minecraft:biome_filter": {
+        "any_of": [
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "the_end"
+          }
+        ]
+      }
+    },
+    "distribution": {
+      "iterations": 30,
+      "scatter_chance": 80.0,
+      "x": {
+        "distribution": "uniform",
+        "extent": [
+          -15,
+          15
+        ]
+      },
+      "y": "query.heightmap(v.originx, v.originz)",
+      "z": {
+        "distribution": "uniform",
+        "extent": [
+          -15,
+          15
+        ]
+      }
+    }
+  }
+}

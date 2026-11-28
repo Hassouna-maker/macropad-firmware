@@ -1,0 +1,8 @@
+{
+  "format_version": "1.21.30",
+  "minecraft:texture_set": {
+    "color": "voi_shr_fe9d",
+    "heightmap": "voi_shr_fe9d_heightmap",
+    "metalness_emissive_roughness_subsurface": "voi_shr_fe9d_mers"
+  }
+}

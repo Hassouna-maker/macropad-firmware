@@ -1,0 +1,29 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:single_block_feature": {
+    "description": {
+      "identifier": "ct:gilded_end_vines_block_1"
+    },
+    "places_block": {
+      "name": "ct:gilded_end_vines",
+      "states": {
+        "ct:generated": true,
+        "ct:display": false
+      }
+    },
+    "enforce_placement_rules": false,
+    "enforce_survivability_rules": false,
+    "may_attach_to": {
+      "auto_rotate": true,
+      "min_sides_must_attach": 1,
+      "sides": [
+        "ct:gilded_end_stone",
+        "ct:end_spire_log",
+        "ct:gilded_end_grass_block"
+      ]
+    },
+    "may_replace": [
+      "minecraft:air"
+    ]
+  }
+}

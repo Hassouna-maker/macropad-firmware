@@ -1,0 +1,110 @@
+{
+    "format_version": "1.26.0",
+    "minecraft:block": {
+        "description": {
+            "identifier": "ct:endergloom_short_grass",
+            "menu_category": {
+                "category": "nature",
+                "group": "minecraft:itemGroup.name.grass"
+            }
+        },
+        "components": {
+            "tag:nonsolid": {},
+            "minecraft:support": {
+                "shape": "stair"
+            },
+            "minecraft:connection_rule": {
+                "accepts_connections_from": "none"
+            },
+            "minecraft:collision_box": false,
+            "minecraft:selection_box": {
+                "origin": [
+                    -6,
+                    0,
+                    -6
+                ],
+                "size": [
+                    12,
+                    6,
+                    12
+                ]
+            },
+            "minecraft:destructible_by_mining": {
+                "seconds_to_destroy": 0
+            },
+            "minecraft:destructible_by_explosion": {
+                "explosion_resistance": 0
+            },
+            "minecraft:placement_filter": {
+                "conditions": [
+                    {
+                        "allowed_faces": [
+                            "up"
+                        ],
+                        "block_filter": [
+                            "minecraft:end_stone",
+                            "minecraft:end_bricks",
+                            {
+                                "tags": "query.any_tag('end_grass', 'grass')"
+                            },
+                            "ct:gilded_end_moss",
+                            "ct:end_mud"
+                        ]
+                    }
+                ]
+            },
+            "minecraft:flammable": true,
+            "minecraft:geometry": "geometry.ct.cross",
+            "minecraft:material_instances": {
+                "*": {
+                    "texture": "ct:endergloom_short_grass",
+                    "render_method": "alpha_test",
+                    "face_dimming": false,
+                    "ambient_occlusion": false
+                }
+            },
+            "minecraft:light_dampening": 0,
+            "minecraft:map_color": "#3F4570",
+            "minecraft:liquid_detection": {
+                "detection_rules": [
+                    {
+                        "liquid_type": "water",
+                        "can_contain_liquid": false,
+                        "on_liquid_touches": "popped"
+                    }
+                ]
+            },
+            "minecraft:precipitation_interactions": {
+                "precipitation_behavior": "snowlogging"
+            },
+            "minecraft:redstone_conductivity": {
+                "redstone_conductor": true
+            },
+            "minecraft:replaceable": {},
+            "minecraft:random_offset": {
+                "x": {
+                    "range": {
+                        "min": -4,
+                        "max": 4
+                    },
+                    "steps": 16
+                },
+                "y": {
+                    "range": {
+                        "min": -3,
+                        "max": 0
+                    },
+                    "steps": 16
+                },
+                "z": {
+                    "range": {
+                        "min": -4,
+                        "max": 4
+                    },
+                    "steps": 16
+                }
+            },
+            "minecraft:loot": "loot_tables/empty.json"
+        }
+    }
+}

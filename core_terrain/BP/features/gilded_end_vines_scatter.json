@@ -1,0 +1,19 @@
+{
+  "format_version": "1.13.0",
+  "minecraft:scatter_feature": {
+    "description": {
+      "identifier": "ct:gilded_end_vines_scatter"
+    },
+    "places_feature": "ct:gilded_end_vines_block_1",
+    "iterations": "math.random_integer(4, 8)",
+    "x": "0",
+    "y": {
+      "distribution": "fixed_grid",
+      "extent": [
+        0,
+        8
+      ]
+    },
+    "z": "0"
+  }
+}

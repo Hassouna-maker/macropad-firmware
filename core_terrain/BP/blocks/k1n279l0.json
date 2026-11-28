@@ -1,0 +1,64 @@
+{
+    "format_version": "1.26.0",
+    "minecraft:block": {
+        "description": {
+            "identifier": "ct:voidshard_ore",
+            "menu_category": {
+                "category": "nature",
+                "group": "minecraft:itemGroup.name.ore"
+            }
+        },
+        "components": {
+            "tag:ulkd_ess:ore_voidshard": {},
+            "minecraft:loot": "loot_tables/cc/ores/voidshard_ore.loot.json",
+            "ct:item_tier": {
+                "tool": "pickaxe",
+                "tier": 4,
+                "xp": 4
+            },
+            "minecraft:map_color": "#8438AC",
+            "minecraft:destructible_by_explosion": {
+                "explosion_resistance": 3
+            },
+            "minecraft:light_dampening": 4,
+            "minecraft:geometry": "geometry.ct.overlay_block",
+            "minecraft:material_instances": {
+                "*": {
+                    "texture": "end_stone",
+                    "render_method": "alpha_test"
+                },
+                "overlay": {
+                    "texture": "ct:voidshard_ore",
+                    "render_method": "alpha_test",
+                    "face_dimming": false,
+                    "ambient_occlusion": false
+                }
+            },
+            "minecraft:liquid_detection": {
+                "detection_rules": [
+                    {
+                        "on_liquid_touches": "no_reaction"
+                    }
+                ]
+            },
+            "minecraft:redstone_conductivity": {
+                "redstone_conductor": true
+            },
+            "ct:fortune": "ct:voidshard",
+            "minecraft:light_emission": 4,
+            "tag:minecraft:is_pickaxe_item_destructible": {},
+            "tag:minecraft:diamond_tier_destructible": {},
+            "minecraft:destructible_by_mining": {
+                "seconds_to_destroy": 10,
+                "item_specific_speeds": [
+                    {
+                        "item": {
+                            "tags": "query.all_tags('minecraft:is_pickaxe') && q.any_tag('minecraft:diamond_tier', 'minecraft:netherite_tier')"
+                        },
+                        "destroy_speed": 3
+                    }
+                ]
+            }
+        }
+    }
+}

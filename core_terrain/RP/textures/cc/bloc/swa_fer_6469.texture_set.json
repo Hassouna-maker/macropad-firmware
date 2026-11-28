@@ -1,0 +1,8 @@
+{
+  "format_version": "1.21.30",
+  "minecraft:texture_set": {
+    "color": "swa_fer_6469",
+    "heightmap": "swa_fer_6469_heightmap",
+    "metalness_emissive_roughness_subsurface": "swa_fer_6469_mers"
+  }
+}

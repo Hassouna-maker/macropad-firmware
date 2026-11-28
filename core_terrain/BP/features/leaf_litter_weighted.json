@@ -1,0 +1,26 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:weighted_random_feature": {
+    "description": {
+      "identifier": "ct:leaf_litter_weighted"
+    },
+    "features": [
+      [
+        "ct:leaf_litter_block_1",
+        1
+      ],
+      [
+        "ct:leaf_litter_block_2",
+        1
+      ],
+      [
+        "ct:leaf_litter_block_3",
+        1
+      ],
+      [
+        "ct:leaf_litter_block_4",
+        1
+      ]
+    ]
+  }
+}

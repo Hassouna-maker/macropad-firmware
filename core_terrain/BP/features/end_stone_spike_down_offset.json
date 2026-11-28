@@ -1,0 +1,15 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:scatter_feature": {
+    "description": {
+      "identifier": "ct:end_stone_spike_down_offset"
+    },
+    "iterations": 1,
+    "x": "0",
+    "y": "-4",
+    "z": "0",
+    "places_feature": "ct:end_stone_spike_down_weighted",
+    "scatter_chance": 100.0,
+    "coordinate_eval_order": "zyx"
+  }
+}

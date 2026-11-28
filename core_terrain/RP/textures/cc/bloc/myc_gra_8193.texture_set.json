@@ -1,0 +1,8 @@
+{
+  "format_version": "1.21.30",
+  "minecraft:texture_set": {
+    "color": "myc_gra_8193",
+    "heightmap": "myc_gra_8193_heightmap",
+    "metalness_emissive_roughness_subsurface": "myc_gra_8193_mers"
+  }
+}

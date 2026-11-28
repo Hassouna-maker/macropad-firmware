@@ -1,0 +1,12 @@
+{
+  "format_version": "1.13.0",
+  "minecraft:aggregate_feature": {
+    "description": {
+      "identifier": "ct:dripice_aggregate"
+    },
+    "features": [
+      "ct:ice_cave_ice_scatter",
+      "ct:dripice_search_weight"
+    ]
+  }
+}

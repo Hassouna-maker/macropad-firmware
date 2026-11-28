@@ -1,0 +1,46 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:feature_rules": {
+    "description": {
+      "identifier": "ct:smooth_end_stone_feature_the_end_rule",
+      "places_feature": "ct:smooth_end_stone_feature"
+    },
+    "conditions": {
+      "placement_pass": "final_pass",
+      "minecraft:biome_filter": {
+        "any_of": [
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "the_end"
+          }
+        ]
+      }
+    },
+    "distribution": {
+      "iterations": 150,
+      "scatter_chance": 100.0,
+      "x": {
+        "distribution": "gaussian",
+        "extent": [
+          -8,
+          8
+        ]
+      },
+      "y": {
+        "distribution": "gaussian",
+        "extent": [
+          0,
+          "query.above_top_solid(v.originx, v.originz)"
+        ]
+      },
+      "z": {
+        "distribution": "gaussian",
+        "extent": [
+          -8,
+          8
+        ]
+      }
+    }
+  }
+}

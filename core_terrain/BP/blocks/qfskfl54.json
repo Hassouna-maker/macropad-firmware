@@ -1,0 +1,105 @@
+{
+    "format_version": "1.21.130",
+    "minecraft:block": {
+        "description": {
+            "identifier": "ct:palm_sapling",
+            "menu_category": {
+                "category": "none"
+            },
+            "states": {
+                "ct:grow_state": [
+                    1,
+                    2,
+                    3,
+                    4
+                ]
+            }
+        },
+        "components": {
+            "tag:plant": {},
+            "tag:nonsolid": {},
+            "minecraft:destructible_by_mining": {
+                "seconds_to_destroy": 0.0
+            },
+            "minecraft:destructible_by_explosion": {
+                "explosion_resistance": 0
+            },
+            "minecraft:geometry": "geometry.ct.cross",
+            "minecraft:material_instances": {
+                "*": {
+                    "texture": "ct:palm_sapling",
+                    "render_method": "alpha_test",
+                    "ambient_occlusion": false,
+                    "face_dimming": false
+                }
+            },
+            "minecraft:collision_box": false,
+            "minecraft:selection_box": {
+                "origin": [
+                    -6,
+                    0,
+                    -6
+                ],
+                "size": [
+                    12,
+                    13,
+                    12
+                ]
+            },
+            "minecraft:light_dampening": 0,
+            "minecraft:map_color": "#5A9726",
+            "minecraft:placement_filter": {
+                "conditions": [
+                    {
+                        "allowed_faces": [
+                            "up"
+                        ],
+                        "block_filter": [
+                            "grass_block",
+                            "dirt",
+                            "podzol",
+                            "dirt_with_roots",
+                            "coarse_dirt",
+                            {
+                                "tags": "query.any_tag('dirt') || query.any_tag('grass') || query.any_tag('sand')"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "minecraft:tick": {
+                "looping": false,
+                "interval_range": [
+                    1,
+                    1
+                ]
+            },
+            "ct:crop_grow": {},
+            "minecraft:liquid_detection": {
+                "detection_rules": [
+                    {
+                        "can_contain_liquid": true,
+                        "liquid_type": "water",
+                        "on_liquid_touches": "popped"
+                    }
+                ]
+            }
+        },
+        "permutations": [
+            {
+                "condition": "query.block_state('ct:grow_state') == 4",
+                "components": {
+                    "ct:sapling": {},
+                    "minecraft:material_instances": {
+                        "*": {
+                            "texture": "ct:palm_sapling",
+                            "render_method": "alpha_test",
+                            "ambient_occlusion": false,
+                            "face_dimming": false
+                        }
+                    }
+                }
+            }
+        ]
+    }
+}

@@ -1,0 +1,18 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:weighted_random_feature": {
+    "description": {
+      "identifier": "ct:end_purple_grass_weighted"
+    },
+    "features": [
+      [
+        "ct:end_purple_grass_block_1",
+        2
+      ],
+      [
+        "ct:end_purple_grass_block_2",
+        3
+      ]
+    ]
+  }
+}

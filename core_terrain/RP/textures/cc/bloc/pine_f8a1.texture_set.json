@@ -1,0 +1,8 @@
+{
+  "format_version": "1.21.30",
+  "minecraft:texture_set": {
+    "color": "pine_f8a1",
+    "heightmap": "pine_f8a1_heightmap",
+    "metalness_emissive_roughness_subsurface": "pine_f8a1_mers"
+  }
+}

@@ -1,0 +1,57 @@
+{
+    "format_version": "1.26.0",
+    "minecraft:block": {
+        "description": {
+            "identifier": "ct:smooth_end_stone",
+            "menu_category": {
+                "category": "construction",
+                "group": "minecraft:itemGroup.name.stoneBrick"
+            }
+        },
+        "components": {
+            "tag:solid": {},
+            "minecraft:collision_box": true,
+            "minecraft:selection_box": true,
+            "minecraft:geometry": "minecraft:geometry.full_block",
+            "minecraft:destructible_by_explosion": {
+                "explosion_resistance": 0
+            },
+            "minecraft:redstone_conductivity": {
+                "redstone_conductor": true
+            },
+            "minecraft:light_dampening": 15,
+            "minecraft:material_instances": {
+                "*": {
+                    "texture": "ct:smooth_end_stone",
+                    "render_method": "opaque"
+                }
+            },
+            "minecraft:map_color": "#4F526A",
+            "minecraft:loot": "loot_tables/cc/block_variants/blocks/smooth_end_stone.loot.json",
+            "minecraft:liquid_detection": {
+                "detection_rules": [
+                    {
+                        "liquid_type": "water",
+                        "on_liquid_touches": "blocking"
+                    }
+                ]
+            },
+            "ct:item_tier": {
+                "tool": "pickaxe",
+                "tier": 1
+            },
+            "tag:minecraft:is_pickaxe_item_destructible": {},
+            "minecraft:destructible_by_mining": {
+                "seconds_to_destroy": 5,
+                "item_specific_speeds": [
+                    {
+                        "item": {
+                            "tags": "query.all_tags('minecraft:is_pickaxe')"
+                        },
+                        "destroy_speed": 1.5333
+                    }
+                ]
+            }
+        }
+    }
+}

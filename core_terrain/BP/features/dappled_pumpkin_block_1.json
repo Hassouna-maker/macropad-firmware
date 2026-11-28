@@ -1,0 +1,19 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:single_block_feature": {
+    "description": {
+      "identifier": "ct:dappled_pumpkin_block_1"
+    },
+    "places_block": "minecraft:pumpkin",
+    "enforce_placement_rules": false,
+    "enforce_survivability_rules": false,
+    "may_attach_to": {
+      "bottom": [
+        "minecraft:grass_block"
+      ]
+    },
+    "may_replace": [
+      "minecraft:air"
+    ]
+  }
+}

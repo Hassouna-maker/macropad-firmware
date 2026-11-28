@@ -1,0 +1,31 @@
+{
+  "format_version": "1.13.0",
+  "minecraft:scatter_feature": {
+    "description": {
+      "identifier": "ct:cobbled_umbral_end_stone_scatter"
+    },
+    "places_feature": "ct:cobbled_umbral_end_stone_block_1",
+    "iterations": 50,
+    "x": {
+      "distribution": "uniform",
+      "extent": [
+        -3,
+        3
+      ]
+    },
+    "y": {
+      "distribution": "uniform",
+      "extent": [
+        -10,
+        0
+      ]
+    },
+    "z": {
+      "distribution": "uniform",
+      "extent": [
+        -3,
+        3
+      ]
+    }
+  }
+}

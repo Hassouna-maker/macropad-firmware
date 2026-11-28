@@ -1,0 +1,18 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:weighted_random_feature": {
+    "description": {
+      "identifier": "ct:end_stone_spike_search_weight"
+    },
+    "features": [
+      [
+        "ct:end_stone_spike_up_search",
+        3
+      ],
+      [
+        "ct:end_stone_spike_down_search",
+        1
+      ]
+    ]
+  }
+}

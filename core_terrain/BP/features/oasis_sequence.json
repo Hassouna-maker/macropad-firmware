@@ -1,0 +1,9 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:sequence_feature": {
+    "description": {
+      "identifier": "ct:oasis_sequence"
+    },
+    "features": ["ct:oasis_grass_scatter", "ct:dry_bush_scatter", "ct:palm_tree_weighted"]
+  }
+}

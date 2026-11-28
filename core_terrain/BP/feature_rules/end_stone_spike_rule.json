@@ -1,0 +1,46 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:feature_rules": {
+    "description": {
+      "identifier": "ct:end_stone_spike_rule",
+      "places_feature": "ct:end_stone_spike_scatter"
+    },
+    "conditions": {
+      "placement_pass": "final_pass",
+      "minecraft:biome_filter": {
+        "any_of": [
+          {
+            "test": "has_biome_tag",
+            "operator": "==",
+            "value": "the_end"
+          }
+        ]
+      }
+    },
+    "distribution": {
+      "iterations": 80,
+      "scatter_chance": 30.0,
+      "x": {
+        "distribution": "gaussian",
+        "extent": [
+          -8,
+          8
+        ]
+      },
+      "y": {
+        "distribution": "gaussian",
+        "extent": [
+          0,
+          "query.above_top_solid(v.originx, v.originz) + 20"
+        ]
+      },
+      "z": {
+        "distribution": "gaussian",
+        "extent": [
+          -8,
+          8
+        ]
+      }
+    }
+  }
+}

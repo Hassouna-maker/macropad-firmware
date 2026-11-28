@@ -1,0 +1,27 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:scatter_feature": {
+    "description": {
+      "identifier": "ct:end_stone_spike_scatter"
+    },
+    "places_feature": "ct:end_stone_spike_search_weight",
+    "iterations": 5,
+    "x": {
+      "distribution": "uniform",
+      "extent": [
+        -8,
+        8
+      ]
+    },
+    "y": "0",
+    "z": {
+      "distribution": "uniform",
+      "extent": [
+        -8,
+        8
+      ]
+    },
+    "scatter_chance": 100.0,
+    "coordinate_eval_order": "zyx"
+  }
+}

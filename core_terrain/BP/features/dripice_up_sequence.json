@@ -1,0 +1,9 @@
+{
+  "format_version": "1.13.0",
+  "minecraft:sequence_feature": {
+    "description": {
+      "identifier": "ct:dripice_up_sequence"
+    },
+    "features": ["ct:dripice_up_check", "ct:dripice_up_weight"]
+  }
+}

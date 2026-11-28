@@ -1,0 +1,124 @@
+{
+  "format_version": "1.26.0",
+  "minecraft:block": {
+    "description": {
+      "identifier": "ct:end_twister",
+      "menu_category": {
+        "category": "none"
+      },
+      "states": {
+        "ct:connect": ["end", "inner"]
+      }
+    },
+    "components": {
+      "ct:growing_plant": {},
+      "tag:plant": {},
+      "tag:vine": {},
+      "tag:nonsolid": {},
+      "minecraft:destructible_by_mining": {
+        "seconds_to_destroy": 0.0
+      },
+      "minecraft:destructible_by_explosion": {
+        "explosion_resistance": 0
+      },
+      "minecraft:geometry": "geometry.ct.cross",
+      "minecraft:material_instances": {
+        "*": {
+          "texture": "ct:end_twister_top",
+          "render_method": "alpha_test",
+          "ambient_occlusion": false,
+          "face_dimming": false
+        }
+      },
+      "minecraft:collision_box": false,
+      "minecraft:selection_box": {
+        "origin": [-4, 0, -4],
+        "size": [8, 15, 8]
+      },
+      "minecraft:light_dampening": 0,
+      "minecraft:map_color": "#C47B27",
+      "minecraft:loot": "loot_tables/empty.json",
+      "minecraft:liquid_detection": {
+        "detection_rules": [
+          {
+            "can_contain_liquid": true,
+            "liquid_type": "water",
+            "on_liquid_touches": "no_reaction"
+          }
+        ]
+      },
+      "minecraft:support": {
+        "shape": "stair"
+      },
+      "minecraft:connection_rule": {
+        "accepts_connections_from": "none"
+      },
+      "minecraft:redstone_conductivity": {
+        "redstone_conductor": true
+      }
+    },
+    "permutations": [
+      {
+        "condition": "q.block_state('ct:connect') == 'inner'",
+        "components": {
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:end_twister_base",
+              "render_method": "alpha_test",
+              "ambient_occlusion": false,
+              "face_dimming": false
+            }
+          },
+          "minecraft:selection_box": {
+            "origin": [-4, 0, -4],
+            "size": [8, 16, 8]
+          },
+          "minecraft:placement_filter": {
+            "conditions": [
+              {
+                "allowed_faces": ["up"],
+                "block_filter": [
+                  {
+                    "name": "ct:end_twister"
+                  },
+                  {
+                    "tags": "query.any_tag('grass')"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('ct:connect') == 'end'",
+        "components": {
+          "tag:vine_tip": {},
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "ct:end_twister_top",
+              "render_method": "alpha_test",
+              "ambient_occlusion": false,
+              "face_dimming": false
+            }
+          },
+          "minecraft:placement_filter": {
+            "conditions": [
+              {
+                "allowed_faces": ["up"],
+                "block_filter": [
+                  {
+                    "name": "ct:end_twister"
+                  },
+                  {
+                    "tags": "query.any_tag('grass')"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

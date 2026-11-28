@@ -1,0 +1,8 @@
+{
+  "format_version": "1.21.30",
+  "minecraft:texture_set": {
+    "color": "pal_sap_4563",
+    "heightmap": "pal_sap_4563_heightmap",
+    "metalness_emissive_roughness_subsurface": "pal_sap_4563_mers"
+  }
+}

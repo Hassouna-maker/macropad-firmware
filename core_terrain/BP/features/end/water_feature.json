@@ -1,0 +1,23 @@
+{
+  "format_version": "1.21.40",
+  "minecraft:single_block_feature": {
+    "description": {
+      "identifier": "ct:end/water_feature"
+    },
+    "places_block": "minecraft:water",
+    "enforce_placement_rules": false,
+    "enforce_survivability_rules": false,
+    "may_not_attach_to": {
+      "sides": [
+        "minecraft:air",
+        "minecraft:chorus_plant",
+        "ct:endergloom_grass",
+        "ct:endergloom_short_grass",
+        "ct:end_twister"
+      ],
+      "bottom": ["minecraft:chorus_plant"],
+      "top": ["minecraft:chorus_plant", "ct:endergloom_grass", "ct:endergloom_short_grass", "ct:end_twister"]
+    },
+    "may_replace": ["ct:endergloom_grass_block"]
+  }
+}
