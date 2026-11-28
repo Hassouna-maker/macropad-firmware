@@ -3,10 +3,10 @@
   "minecraft:feature_rules": {
     "description": {
       "identifier": "ct:land_moss_band1",
-      "places_feature": "ct:land/moss_h4"
+      "places_feature": "ct:land/moss_h1"
     },
     "conditions": {
-      "placement_pass": "after_surface_pass",
+      "placement_pass": "final_pass",
       "minecraft:biome_filter": {
         "any_of": [
           {
@@ -42,7 +42,7 @@
           15
         ]
       },
-      "y": "(((math.sin(v.worldx*2.9 + 200) + math.sin(v.worldz*3.4 + 20) + math.sin((v.worldx + v.worldz)*2.3 + 90)) / 3) > 0.62 && ((math.sin(v.worldx*2.9 + 200) + math.sin(v.worldz*3.4 + 20) + math.sin((v.worldx + v.worldz)*2.3 + 90)) / 3) <= 0.74) ? (q.heightmap(v.worldx, v.worldz) - 1) : -100",
+      "y": "(((math.sin(v.worldx*2.9 + 200) + math.sin(v.worldz*3.4 + 20) + math.sin((v.worldx + v.worldz)*2.3 + 90)) / 3) > 0.65 && ((math.sin(v.worldx*2.9 + 200) + math.sin(v.worldz*3.4 + 20) + math.sin((v.worldx + v.worldz)*2.3 + 90)) / 3) <= 0.8) ? (q.heightmap(v.worldx, v.worldz)) : -100",
       "z": {
         "distribution": "fixed_grid",
         "extent": [

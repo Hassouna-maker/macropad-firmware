@@ -18,3 +18,4 @@ they use. No villages, ruins, temples or mineshafts.
 - v1.5.0: item definitions and inventory icons for the included blocks; grass/snow layers rebuilt as smooth height gradients.
 - v1.5.1: grass layers now replace the surface grass block (placing them in the air above was blocked by grass plants).
 - v1.6.0: 8 missing block models restored (palm leaves, End moss, thin logs, pebbles, barnacles, small cactus); grass layer inventory icon fixed; new dirt and moss layers.
+- v1.7.0: layers sit on top of the ground again (replacing grass plants) and stack like snow layers when you use one on another; bone meal grows palm saplings (small script).

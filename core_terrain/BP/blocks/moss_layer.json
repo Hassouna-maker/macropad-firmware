@@ -60,7 +60,9 @@
       "minecraft:destructible_by_explosion": {
         "explosion_resistance": 0
       },
-      "tag:minecraft:is_hoe_item_destructible": {}
+      "tag:minecraft:is_hoe_item_destructible": {},
+      "tag:dirt": {},
+      "tag:grass": {}
     },
     "permutations": [
       {

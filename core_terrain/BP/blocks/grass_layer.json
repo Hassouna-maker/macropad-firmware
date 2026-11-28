@@ -62,7 +62,8 @@
         "explosion_resistance": 0
       },
       "tag:grass": {},
-      "tag:minecraft:is_shovel_item_destructible": {}
+      "tag:minecraft:is_shovel_item_destructible": {},
+      "tag:dirt": {}
     },
     "permutations": [
       {
